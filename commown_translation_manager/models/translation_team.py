@@ -5,19 +5,24 @@ class TranslationTeam(models.Model):
     _name = "commown_translation_manager.translation_team"
     _description = "Translation team"
 
+    name = fields.Char(
+        required=True,
+    )
+
     translators = fields.Many2many(
-        "res.partner",
+        "res.users",
+        domain="[('share','=',False)]",
         string="Translators",
     )
 
-    initial_lang = fields.Selection(
+    initial_lang = fields.Many2one(
+        "res.lang",
         string="Initial language",
-        related="lang",
         required="true",
     )
 
-    target_lang = fields.Selection(
+    target_lang = fields.Many2one(
+        "res.lang",
         string="Target language",
-        related="lang",
         required="true",
     )

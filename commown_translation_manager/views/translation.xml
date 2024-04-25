@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Vues Content site -->
+    <!-- Vues - Content Site -->
     <record id="view_content_site_tree" model="ir.ui.view">
         <field name="name">commown_translation_manager.content_site.tree</field>
         <field name="model">commown_translation_manager.content_site</field>
@@ -12,6 +12,7 @@
             </tree>
         </field>
     </record>
+
     <record id="view_content_site_search" model="ir.ui.view">
         <field name="name">Content Site Search</field>
         <field name="model">commown_translation_manager.content_site</field>
@@ -26,8 +27,47 @@
     <record id="action_sites" model="ir.actions.act_window">
         <field name="name">Sites</field>
         <field name="res_model">commown_translation_manager.content_site</field>
-        <field name="view_type">tree</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_type">form</field>
+        <field name="view_id" ref="view_content_site_tree"/>
         <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Vues - Equipes de traduction -->
+    <record id="view_teams_tree" model="ir.ui.view">
+        <field name="name">commown_translation_manager.translation_team.tree</field>
+        <field name="model">commown_translation_manager.translation_team</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="initial_lang"/>
+                <field name="target_lang"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_teams_form" model="ir.ui.view">
+        <field name="name">commown_translation_manager.translation_team.form</field>
+        <field name="model">commown_translation_manager.translation_team</field>
+        <field name="arch" type="xml">
+            <form>
+                <group name="languages">
+                    <field name="initial_lang"/>
+                    <field name="target_lang"/>
+                </group>
+                <group name="translators">
+                    <field name="translators" widget="many2many_tags"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_teams" model="ir.actions.act_window">
+        <field name="name">Translation teams</field>
+        <field name="res_model">commown_translation_manager.translation_team</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_type">form</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_teams_tree"/>
     </record>
 
     <!-- Menus de la barre supérieure -->
@@ -37,14 +77,20 @@
             groups="group_managers,group_translators"
             action="action_sites"/>
 
-    <menuitem id="menu_content_site"
-            name="Content Translations"
-            sequence="20"
+    <menuitem id="menu_config"
+            name="Configuration"
+            groups="group_managers"
+            sequence="10"
             parent="menu_commown_translation_manager_root"/>
 
-    <menuitem id="menu_content_site_site"
+    <menuitem id="menu_config_site"
             action="action_sites"
-            sequence="10"
-            parent="menu_content_site"/>
+            sequence="20"
+            parent="menu_config"/>
+    
+    <menuitem id="menu_config_teams"
+            action="action_teams"
+            sequence="30"
+            parent="menu_config"/>
 
 </odoo>
