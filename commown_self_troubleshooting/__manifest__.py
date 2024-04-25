@@ -5,7 +5,7 @@
 {
     "name": "Commown Self Troubleshooting",
     "category": "",
-    "version": "12.0.1.0.20",
+    "version": "12.0.1.0.21",
     "author": "Commown SCIC",
     "license": "AGPL-3",
     "website": "https://commown.coop",
@@ -25,6 +25,8 @@
         "data/CC/screen/form.xml",
         "data/ContractManagement/termination/form.xml",
         "data/ContractManagement/termination/issue_template.xml",
+        "data/ContractManagement/theftandloss/form.xml",
+        "data/ContractManagement/theftandloss/issue_template.xml",
         "data/FP2/camera/form.xml",
         "data/FP2/camera/issue_template.xml",
         "data/FP2/micro/form.xml",

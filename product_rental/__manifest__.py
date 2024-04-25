@@ -2,7 +2,7 @@
     "name": "Rental product",
     "category": "Sale",
     "summary": "Define products as rental products",
-    "version": "12.0.1.1.8",
+    "version": "12.0.1.1.10",
     "description": """Rental products have a fixed deposit and recurring price, displayed on the product page""",
     "author": "Commown SCIC",
     "license": "AGPL-3",
@@ -19,6 +19,7 @@
     ],
     "external_dependencies": {},
     "data": [
+        "data/mail_templates.xml",
         "data/project.xml",
         "views/contract.xml",
         "views/portal_contract.xml",
