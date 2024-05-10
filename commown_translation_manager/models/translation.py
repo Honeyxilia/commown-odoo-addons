@@ -16,7 +16,7 @@ class Translation(models.Model):
     )
     
     content_id = fields.Many2one(
-        "commown_translation_manager.content", 
+        comodel_name="commown_translation_manager.content", 
         string="Content",
         required=True,
         ondelete="cascade",
@@ -27,8 +27,8 @@ class Translation(models.Model):
         required=True,
     )
     
-    language = fields.Char(
-        "Language", 
+    language = fields.Many2one(
+        "res.lang", 
         required=True,
     )
 

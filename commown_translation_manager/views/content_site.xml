@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vues - Content Site -->
+    <record id="view_content_site_tree" model="ir.ui.view">
+        <field name="name">commown_translation_manager.content_site.tree</field>
+        <field name="model">commown_translation_manager.content_site</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="site_name"/>
+                <field name="site_url"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_content_site_search" model="ir.ui.view">
+        <field name="name">Content Site Search</field>
+        <field name="model">commown_translation_manager.content_site</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="site_name"/>
+                <field name="site_url"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sites" model="ir.actions.act_window">
+        <field name="name">Sites</field>
+        <field name="res_model">commown_translation_manager.content_site</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_type">form</field>
+        <field name="view_id" ref="view_content_site_tree"/>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+</odoo>
