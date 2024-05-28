@@ -1,9 +1,20 @@
 from odoo import fields, models
 
+class TranslationRequestStage(models.Model):
+    _name = "commown_translation_manager.translation_request_stage"
+
+    name = fields.Char(
+        required=True
+    )
 
 class TranslationRequest(models.Model):
     _name = "commown_translation_manager.translation_request"
     _description = "Translation request of a content"
+
+    stage_id = fields.Many2one(
+        "commown_translation_manager.translation_request_stage",
+        required=True,
+    )
 
     origin_t10n_id = fields.Many2one(
         "commown_translation_manager.translation",
