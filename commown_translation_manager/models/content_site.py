@@ -22,7 +22,7 @@ class ContentSite(models.Model):
         required=True,
     )
 
-    supported_langs = fields.Many2one(
+    supported_langs = fields.Many2many(
         "res.lang",
         string="Supported languages",
     )
@@ -33,3 +33,26 @@ class ContentSite(models.Model):
         string="Contents",
         required=True,
     )
+
+    def action_open_site_requests(self):
+        """
+            Opens a kanban view with all related translation requests from site.
+        """
+        req_ids = self.env["commown_translation_manager.translation_request"].search(
+                [('origin_t10n_id.content_id.site_id', '=', self.id)]
+            ).ids
+        
+        domain = None
+        
+        if req_ids:
+            domain = "[('id', 'in', [%s])]" % ",".join(str(_id) for _id in req_ids)
+
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "commown_translation_manager.translation_request",
+            "name": self.site_name,
+            "view_mode": "kanban,form",
+            "view_type": "kanban",
+            "domain": domain,
+            "target": "current",
+        }

@@ -1,7 +1,7 @@
 from odoo import fields, models
 
 
-class Translation(models.Model):
+class ContentTranslation(models.Model):
     _name = "commown_translation_manager.translation"
     _description = "Content translation"
     _order = "modification_date desc"
@@ -9,11 +9,6 @@ class Translation(models.Model):
     _sql_constraints = [
         ("url_path_uniq", "unique (url_path)", "Content already exists!"),
     ]
-
-    translator_id = fields.Many2one(
-        "res.partner",
-        string="Translator",
-    )
 
     content_id = fields.Many2one(
         comodel_name="commown_translation_manager.content",

@@ -1,13 +1,22 @@
 from odoo import fields, models
 
 
-class translationRequest(models.Model):
+class TranslationRequest(models.Model):
     _name = "commown_translation_manager.translation_request"
     _description = "Translation request of a content"
 
-    content_translation_id = fields.Many2one(
+    origin_t10n_id = fields.Many2one(
         "commown_translation_manager.translation",
         required=True,
+    )
+
+    target_t10n_id = fields.Many2one(
+        "commown_translation_manager.translation",
+        required=True,
+    )
+
+    authors = fields.Many2many(
+        "res.partner",
     )
 
     translator = fields.Many2one(
@@ -16,20 +25,18 @@ class translationRequest(models.Model):
         relation="commown_translation_team_translation_request_translators_rel",
     )
 
-    modification_date = fields.Date(
+    last_modification_date = fields.Date(
         required=True,
     )
 
     origin_lang = fields.Many2one(
-        "res.lang",
-        required=True,
+        related="origin_t10n_id.language",
     )
 
     target_lang = fields.Many2one(
-        "res.lang",
-        required=True,
+        related="target_t10n_id.language",
     )
 
-    modifications = fields.Html(
+    diffs = fields.Html(
         required=True,
     )

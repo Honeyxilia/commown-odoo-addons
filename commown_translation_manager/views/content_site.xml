@@ -9,8 +9,24 @@
             <tree>
                 <field name="site_name"/>
                 <field name="site_url"/>
-                <field name="supported_langs"/>
+                <field name="supported_langs" widget="many2many_tags"/>
             </tree>
+        </field>
+    </record>
+
+    <record id="view_content_site_config_form" model="ir.ui.view">
+        <field name="name">commown_translation_manager.content_site.form</field>
+        <field name="model">commown_translation_manager.content_site</field>
+        <field name="arch" type="xml">
+            <form>
+                <group name="site_info">
+                    <field name="site_name"/>
+                    <field name="site_url"/>
+                </group>
+                <group name="langs">
+                    <field name="supported_langs" widget="many2many_tags"/>
+                </group>
+            </form>
         </field>
     </record>
 
