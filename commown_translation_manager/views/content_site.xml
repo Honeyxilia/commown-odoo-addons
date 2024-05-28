@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Vues - Content Site -->
-    <record id="view_content_site_tree" model="ir.ui.view">
+    <!-- Vues - Sites Configuration -->
+    <record id="view_content_site_config_tree" model="ir.ui.view">
         <field name="name">commown_translation_manager.content_site.tree</field>
         <field name="model">commown_translation_manager.content_site</field>
         <field name="arch" type="xml">
@@ -21,17 +21,16 @@
             <search>
                 <field name="site_name"/>
                 <field name="site_url"/>
-                <field name="supported_langs"/>
             </search>
         </field>
     </record>
 
-    <record id="action_sites" model="ir.actions.act_window">
-        <field name="name">Sites</field>
+    <record id="action_sites_config" model="ir.actions.act_window">
+        <field name="name">Sites (Configuration)</field>
         <field name="res_model">commown_translation_manager.content_site</field>
         <field name="type">ir.actions.act_window</field>
         <field name="view_type">form</field>
-        <field name="view_id" ref="view_content_site_tree"/>
+        <field name="view_id" ref="view_content_site_config_tree"/>
         <field name="view_mode">tree,form</field>
     </record>
 

@@ -33,7 +33,7 @@
     </record>
 
     <record id="action_teams" model="ir.actions.act_window">
-        <field name="name">Translation teams</field>
+        <field name="name">Translation teams (Configuration)</field>
         <field name="res_model">commown_translation_manager.translation_team</field>
         <field name="type">ir.actions.act_window</field>
         <field name="view_type">form</field>

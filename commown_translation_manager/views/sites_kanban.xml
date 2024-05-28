@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_content_sites_kanban" model="ir.ui.view">
+        <field name="model">commown_translation_manager.content_site</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="site_name"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="content_site_kanban_card">
+
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_content_sites_kanban" model="ir.actions.act_window">
+        <field name="name">Sites</field>
+        <field name="res_model">commown_translation_manager.content_site</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_id" ref="view_content_sites_kanban"/>
+        <field name="view_mode">kanban,tree,form</field>
+    </record>
+</odoo>

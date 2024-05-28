@@ -13,6 +13,7 @@ class translationRequest(models.Model):
     translator = fields.Many2one(
         "res.partner",
         required=True,
+        relation="commown_translation_team_translation_request_translators_rel",
     )
 
     modification_date = fields.Date(

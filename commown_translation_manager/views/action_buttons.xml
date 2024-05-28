@@ -2,26 +2,38 @@
 <odoo>
 
     <!-- Menus de la barre supérieure -->
-    <menuitem id="menu_commown_translation_manager_root"
-            name="Translation Manager"
-            web_icon="commown_translation_manager,static/description/icon.png"
-            groups="group_managers,group_translators"
-            action="action_sites"/>
+    <menuitem
+        id="menu_commown_translation_manager_root"
+        name="Translation Manager"
+        web_icon="commown_translation_manager,static/description/icon.png"
+        groups="group_managers,group_translators"
+        action="action_sites_config"/>
 
-    <menuitem id="menu_config"
-            name="Configuration"
-            groups="group_managers"
-            sequence="10"
-            parent="menu_commown_translation_manager_root"/>
+    <menuitem 
+        id="menu_sites_kanban"
+        name="Sites"
+        sequence="1"
+        action="action_content_sites_kanban"
+        parent="menu_commown_translation_manager_root"/>
+        
 
-    <menuitem id="menu_config_site"
-            action="action_sites"
-            sequence="20"
-            parent="menu_config"/>
+    <menuitem 
+        id="menu_config"
+        name="Configuration"
+        groups="group_managers"
+        sequence="10"
+        parent="menu_commown_translation_manager_root"/>
+
+    <menuitem 
+        id="menu_config_site"
+        action="action_sites_config"
+        sequence="20"
+        parent="menu_config"/>
     
-    <menuitem id="menu_config_teams"
-            action="action_teams"
-            sequence="30"
-            parent="menu_config"/>
+    <menuitem 
+        id="menu_config_teams"
+        action="action_teams"
+        sequence="30"
+        parent="menu_config"/>
 
 </odoo>
