@@ -12,7 +12,6 @@ class TranslationTeam(models.Model):
     translators = fields.Many2many(
         "res.users",
         domain="[('share','=',False)]",
-        string="Translators",
     )
 
     initial_lang = fields.Many2one(

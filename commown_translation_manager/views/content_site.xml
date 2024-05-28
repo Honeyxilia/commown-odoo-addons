@@ -9,6 +9,7 @@
             <tree>
                 <field name="site_name"/>
                 <field name="site_url"/>
+                <field name="supported_langs"/>
             </tree>
         </field>
     </record>
@@ -20,6 +21,7 @@
             <search>
                 <field name="site_name"/>
                 <field name="site_url"/>
+                <field name="supported_langs"/>
             </search>
         </field>
     </record>

@@ -18,8 +18,13 @@ class ContentSite(models.Model):
     )
 
     site_url = fields.Char(
-        string="Site URL", 
+        string="Site URL",
         required=True,
+    )
+
+    supported_langs = fields.Many2one(
+        "res.lang",
+        string="Supported languages",
     )
 
     content_ids = fields.One2many(
@@ -27,4 +32,4 @@ class ContentSite(models.Model):
         inverse_name="site_id",
         string="Contents",
         required=True,
-    )    
+    )

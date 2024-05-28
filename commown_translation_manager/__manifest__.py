@@ -11,6 +11,6 @@
         "security/ir.model.access.csv",
         "views/translation_teams.xml",
         "views/content_site.xml", 
-        "views/translation.xml",
+        "views/action_buttons.xml",
     ]
 }

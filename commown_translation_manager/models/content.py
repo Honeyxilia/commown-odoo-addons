@@ -4,7 +4,7 @@ from odoo import fields, models
 class Content(models.Model):
     _name = "commown_translation_manager.content"
     _description = "Textual content"
-    
+
     _sql_constraints = [
         ("url_path_uniq", "unique (url_path)", "Content already exists!"),
     ]
@@ -14,6 +14,10 @@ class Content(models.Model):
         string="Site",
         required=True,
         ondelete="cascade",
+    )
+
+    content_name = fields.Text(
+        translate=True,
     )
 
     url_path = fields.Char(

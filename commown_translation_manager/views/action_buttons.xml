@@ -3,7 +3,7 @@
 
     <!-- Menus de la barre supérieure -->
     <menuitem id="menu_commown_translation_manager_root"
-            name="Commown Translation Manager"
+            name="Translation Manager"
             web_icon="commown_translation_manager,static/description/icon.png"
             groups="group_managers,group_translators"
             action="action_sites"/>

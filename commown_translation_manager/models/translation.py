@@ -11,12 +11,12 @@ class Translation(models.Model):
     ]
 
     translator_id = fields.Many2one(
-        "res.partner", 
+        "res.partner",
         string="Translator",
     )
-    
+
     content_id = fields.Many2one(
-        comodel_name="commown_translation_manager.content", 
+        comodel_name="commown_translation_manager.content",
         string="Content",
         required=True,
         ondelete="cascade",
@@ -26,13 +26,13 @@ class Translation(models.Model):
         string="URL Path",
         required=True,
     )
-    
+
     language = fields.Many2one(
-        "res.lang", 
+        "res.lang",
         required=True,
     )
 
     modification_date = fields.Date(
-        "Last modification date", 
+        "Last modification date",
         required=True,
     )
