@@ -7,7 +7,7 @@
         name="Translation Manager"
         web_icon="commown_translation_manager,static/description/icon.png"
         groups="group_managers,group_translators"
-        action="action_sites_config"/>
+        action="action_content_sites_kanban"/>
 
     <menuitem 
         id="menu_sites_kanban"

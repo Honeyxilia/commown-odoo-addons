@@ -9,8 +9,8 @@
     "data": [
         "security/res_groups.xml",
         "security/ir.model.access.csv",
-        "views/translation_teams.xml",
-        "views/content_site.xml", 
+        "views/translation_teams_config.xml",
+        "views/content_site_config.xml", 
         "views/requests_kanban.xml",
         "views/sites_kanban.xml",
         "views/action_buttons.xml",
