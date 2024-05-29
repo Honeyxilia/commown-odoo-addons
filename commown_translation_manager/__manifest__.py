@@ -5,14 +5,21 @@
     "license": "AGPL-3",
     "category": "Uncategorized",
     "version": "0.0",
-    "depends": ["base"],
+    "depends": [
+        "base",
+        "mail",
+    ],
     "data": [
         "security/res_groups.xml",
         "security/ir.model.access.csv",
+        "data/translation_request_stages.xml",
         "views/translation_teams_config.xml",
         "views/content_site_config.xml", 
         "views/requests_kanban.xml",
         "views/sites_kanban.xml",
         "views/action_buttons.xml",
-    ]
+    ],
+    "demo": [
+        "demo/demo.xml",
+    ],
 }

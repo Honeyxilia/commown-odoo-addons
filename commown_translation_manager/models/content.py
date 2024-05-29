@@ -9,6 +9,10 @@ class Content(models.Model):
         ("url_path_uniq", "unique (url_path)", "Content already exists!"),
     ]
 
+    name = fields.Text(
+        translate=True,
+    )
+
     site_id = fields.Many2one(
         comodel_name="commown_translation_manager.content_site",
         string="Site",
@@ -16,13 +20,8 @@ class Content(models.Model):
         ondelete="cascade",
     )
 
-    content_name = fields.Text(
-        translate=True,
-    )
-
     url_path = fields.Char(
         string="URL Path",
-        required=True,
     )
 
     translation_ids = fields.One2many(

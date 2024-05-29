@@ -7,8 +7,8 @@
         <field name="model">commown_translation_manager.content_site</field>
         <field name="arch" type="xml">
             <tree>
-                <field name="site_name"/>
-                <field name="site_url"/>
+                <field name="name"/>
+                <field name="url"/>
                 <field name="supported_langs" widget="many2many_tags"/>
             </tree>
         </field>
@@ -20,8 +20,8 @@
         <field name="arch" type="xml">
             <form>
                 <group name="site_info">
-                    <field name="site_name"/>
-                    <field name="site_url"/>
+                    <field name="name"/>
+                    <field name="url"/>
                 </group>
                 <group name="langs">
                     <field name="supported_langs" widget="many2many_tags"/>
@@ -35,8 +35,8 @@
         <field name="model">commown_translation_manager.content_site</field>
         <field name="arch" type="xml">
             <search>
-                <field name="site_name"/>
-                <field name="site_url"/>
+                <field name="name"/>
+                <field name="url"/>
             </search>
         </field>
     </record>

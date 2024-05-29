@@ -1,0 +1,60 @@
+<odoo>
+    <record id="demo_content_site" model="content_site">
+        <field name="name">Demo site</field>
+        <field name="url">https://demo.commown.coop</field>
+        <field 
+            name="supported_langs"
+            eval="[(6, 0, [ref('base.fr')]), (6, 0, [ref('base.de')])]"
+        />
+    </record>
+
+    <record id="demo_content_1" model="content">
+        <field name="name">Demo content 1</field>
+        <field name="site_id" ref="demo_content_site"/>
+        <field name="url_path">/1</field>
+    </record>
+
+    <record id="demo_content_2" model="content">
+        <field name="name">Demo content 2</field>
+        <field name="site_id" ref="demo_content_site"/>
+        <field name="url_path">/2</field>
+    </record>
+
+    <record id="demo_translation_1_fr" model="translation">
+        <field name="content_path"/>
+        <field name="site_id" ref="demo_content_site"/>
+        <field name="url_path">/1/fr</field>
+    </record>
+
+    <record id="demo_translation_1_de" model="translation">
+        <field name="content_path"/>
+        <field name="site_id" ref="demo_content_site"/>
+        <field name="url_path">/1/de</field>
+    </record>
+
+    <record id="demo_translation_2_fr" model="translation">
+        <field name="content_path"/>
+        <field name="site_id" ref="demo_content_site"/>
+        <field name="url_path">/2/fr</field>
+    </record>
+
+    <record id="demo_translation_2_de" model="translation">
+        <field name="content_path"/>
+        <field name="site_id" ref="demo_content_site"/>
+        <field name="url_path">/2/de</field>
+    </record>
+
+    <record id="demo_request_1_fr_to_de" model="translation_request">
+        <field name="origin_t10n_id" ref="demo_translation_1_fr"/>
+        <field name="target_t10n_id" ref="demo_translation_1_de"/>
+        <field name="diffs">Test 1</field>
+        <field name="stage_id" ref="stage_new"/>
+    </record>
+
+    <record id="demo_request_2_de_to_fr" model="translation_request">
+        <field name="origin_t10n_id" ref="demo_translation_2_de"/>
+        <field name="target_t10n_id" ref="demo_translation_2_fr"/>
+        <field name="diffs">Test 2</field>
+        <field name="stage_id" ref="stage_ongoing"/>
+    </record>
+</odoo>
