@@ -29,3 +29,8 @@ class Content(models.Model):
         inverse_name="content_id",
         string="Translations",
     )
+
+    request_ids = fields.One2many(
+        comodel_name="commown_translation_manager.translation_request",
+        inverse_name = "content_id",
+    )

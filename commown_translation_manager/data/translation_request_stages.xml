@@ -3,27 +3,27 @@
       <field name="name">To be attributed</field>
       <field name="description">New generated requests go here.</field>
       <field name="sequence">10</field>
-      <field name="is_open" eval="True"/>
+      <field name="is_closed" eval="False"/>
     </record>
 
     <record id="stage_ongoing" model="commown_translation_manager.translation_request_stage">
       <field name="name">Ongoing</field>
       <field name="description">Translation is being worked on.</field>
       <field name="sequence">20</field>
-      <field name="is_open" eval="True"/>
+      <field name="is_closed" eval="False"/>
     </record>
 
     <record id="stage_awaiting_confirmation" model="commown_translation_manager.translation_request_stage">
       <field name="name">Awaiting</field>
       <field name="description">Translation</field>
       <field name="sequence">30</field>
-      <field name="is_open" eval="True"/>
+      <field name="is_closed" eval="False"/>
     </record>
 
     <record id="stage_done" model="commown_translation_manager.translation_request_stage">
       <field name="name">Translation done/unrequired.</field>
       <field name="description">Finished or unrequired translations go here.</field>
       <field name="sequence">40</field>
-      <field name="is_open" eval="False"/>
+      <field name="is_closed" eval="True"/>
     </record>
 </odoo>

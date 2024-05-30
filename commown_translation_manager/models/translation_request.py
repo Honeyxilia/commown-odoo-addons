@@ -4,6 +4,7 @@ from odoo import api, fields, models
 class TranslationRequestStage(models.Model):
     _name = "commown_translation_manager.translation_request_stage"
     _description = "Stages for translation requests"
+    _fold_name = "is_closed"
 
     name = fields.Char(
         required=True,
@@ -16,7 +17,7 @@ class TranslationRequestStage(models.Model):
 
     sequence = fields.Integer()
 
-    is_open = fields.Boolean(
+    is_closed = fields.Boolean(
         required=True,
     )
 
@@ -45,7 +46,7 @@ class TranslationRequest(models.Model):
         "res.partner",
     )
 
-    translator = fields.Many2one(
+    translator_id = fields.Many2one(
         "res.partner",
         relation="commown_translation_team_translation_request_translators_rel",
     )
@@ -64,13 +65,22 @@ class TranslationRequest(models.Model):
         required=True,
     )
 
+    @api.model
+    def _read_group_stages_ids(self, stages, domain, order):
+        return self \
+            .env["commown_translation_manager.translation_request_stage"] \
+            .search([])
+
     stage_id = fields.Many2one(
         "commown_translation_manager.translation_request_stage",
+        group_expand="_read_group_stages_ids",
+        track_visibility="is_closed",
+        help="Select the current stage of the translation",
         required=True,
     )
 
-    is_open = fields.Boolean(
-        related="stage_id.is_open",
+    is_closed = fields.Boolean(
+        related="stage_id.is_closed",
     )
 
     @api.multi

@@ -8,12 +8,12 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <field name="stage_id" widget="statusbar" options="{'clickable': '1', 'fold_field': ''}"
+                    <field name="stage_id" widget="statusbar" options="{'clickable': '1', 'fold_field': 'is_closed'}"/>
                 </header>
 
                 <div class="oe_title">
                     <h1>
-                        <field name="name"/>
+                        Test - To replace
                     </h1>
                 </div>
 
@@ -29,7 +29,7 @@
                 </group>
 
                 <notebook name="request_description">
-                    <page name="page_diffs" String="Differences"/>
+                    <page name="page_diffs" string="Differences">
                         <field name="diffs"/>
                         <div class="oe_clear"/>
                     </page>
@@ -45,12 +45,31 @@
     <record id="view_translation_requests_kanban" model="ir.ui.view">
         <field name="model">commown_translation_manager.translation_request</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="stage_id">
+            <kanban class="o_kanban_mobile" default_group_by="stage_id">
                 <field name="target_lang"/>
                 <templates>
                     <t t-name="kanban-box">
                         <div class="oe_kanban_card oe_kanban_global_click">
-                            <field name="display_name"/>
+                            <div class="row">
+                                <strong>
+                                    <field name="display_name"/>
+                                </strong>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-8">
+                                    <field name="translator_id"/>
+                                </div>
+                                <div class="col-4">
+                                    <div class="oe_kanban_bottom_right">
+                                        <img 
+                                            t-att-src="kanban_image('res.partner', 'image_small', record.translator_id.raw_value)"
+                                            t-att-alt="record.translator_id.value"
+                                            width="24" height="24"
+                                            class="oe_kanban_avatar float_right"/>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </t>
                 </templates>
