@@ -1,9 +1,9 @@
 from odoo import fields, models
 
 
-class ContentTranslation(models.Model):
+class ContentVersion(models.Model):
     _name = "commown_translation_manager.version"
-    _description = "Content translation"
+    _description = "Content version of a specific language"
     _order = "modification_date desc"
 
     _sql_constraints = [
