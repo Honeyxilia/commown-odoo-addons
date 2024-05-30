@@ -25,7 +25,7 @@ class Content(models.Model):
     )
 
     translation_ids = fields.One2many(
-        comodel_name="commown_translation_manager.translation",
+        comodel_name="commown_translation_manager.version",
         inverse_name="content_id",
         string="Translations",
     )

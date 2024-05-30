@@ -4,7 +4,7 @@
         <field name="url">https://demo.commown.coop</field>
         <field 
             name="supported_langs"
-            eval="[(6, 0, [ref('base.fr')]), (6, 0, [ref('base.de')])]"
+            eval="[[ref('base.fr')], [ref('base.de')]]"
         />
     </record>
 
@@ -20,7 +20,7 @@
         <field name="url_path">/2</field>
     </record>
 
-    <record id="demo_translation_1_fr" model="commown_translation_manager.translation">
+    <record id="demo_translation_1_fr" model="commown_translation_manager.version">
         <field name="content_path"/>
         <field name="site_id" ref="demo_content_site"/>
         <field name="content_id" ref="demo_content_1"/>
@@ -29,7 +29,7 @@
         <field name="modification_date" eval="str(time.localtime(time.time())[0]+1)+'-01-01'"/>
     </record>
 
-    <record id="demo_translation_1_de" model="commown_translation_manager.translation">
+    <record id="demo_translation_1_de" model="commown_translation_manager.version">
         <field name="content_path"/>
         <field name="site_id" ref="demo_content_site"/>
         <field name="content_id" ref="demo_content_1"/>
@@ -38,7 +38,7 @@
         <field name="modification_date" eval="str(time.localtime(time.time())[0]+1)+'-01-01'"/>
     </record>
 
-    <record id="demo_translation_2_fr" model="commown_translation_manager.translation">
+    <record id="demo_translation_2_fr" model="commown_translation_manager.version">
         <field name="content_path"/>
         <field name="site_id" ref="demo_content_site"/>
         <field name="content_id" ref="demo_content_2"/>
@@ -47,7 +47,7 @@
         <field name="modification_date" eval="str(time.localtime(time.time())[0]+1)+'-01-01'"/>
     </record>
 
-    <record id="demo_translation_2_de" model="commown_translation_manager.translation">
+    <record id="demo_translation_2_de" model="commown_translation_manager.version">
         <field name="content_path"/>
         <field name="site_id" ref="demo_content_site"/>
         <field name="content_id" ref="demo_content_2"/>

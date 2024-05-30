@@ -2,7 +2,7 @@ from odoo import fields, models
 
 
 class ContentTranslation(models.Model):
-    _name = "commown_translation_manager.translation"
+    _name = "commown_translation_manager.version"
     _description = "Content translation"
     _order = "modification_date desc"
 

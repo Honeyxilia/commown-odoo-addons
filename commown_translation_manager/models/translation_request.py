@@ -28,12 +28,12 @@ class TranslationRequest(models.Model):
     _description = "Translation request of a content"
 
     origin_t10n_id = fields.Many2one(
-        "commown_translation_manager.translation",
+        "commown_translation_manager.version",
         required=True,
     )
 
     target_t10n_id = fields.Many2one(
-        "commown_translation_manager.translation",
+        "commown_translation_manager.version",
         required=True,
     )
 
