@@ -25,5 +25,6 @@
       <field name="description">Finished or unrequired translations go here.</field>
       <field name="sequence">40</field>
       <field name="is_closed" eval="True"/>
+      <field name="fold" eval="True"/>
     </record>
 </odoo>

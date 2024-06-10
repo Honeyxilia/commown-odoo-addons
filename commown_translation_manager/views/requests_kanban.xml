@@ -13,7 +13,7 @@
 
                 <div class="oe_title">
                     <h1>
-                        Test - To replace
+                        <field name="display_name"/>
                     </h1>
                 </div>
 

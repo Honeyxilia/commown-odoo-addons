@@ -4,7 +4,6 @@ from odoo import api, fields, models
 class TranslationRequestStage(models.Model):
     _name = "commown_translation_manager.translation_request_stage"
     _description = "Stages for translation requests"
-    _fold_name = "is_closed"
 
     name = fields.Char(
         required=True,
@@ -19,6 +18,10 @@ class TranslationRequestStage(models.Model):
 
     is_closed = fields.Boolean(
         required=True,
+    )
+
+    fold = fields.Boolean(
+        default=False,
     )
 
 
@@ -66,15 +69,14 @@ class TranslationRequest(models.Model):
     )
 
     @api.model
-    def _read_group_stages_ids(self, stages, domain, order):
+    def _read_group_stage_ids(self, stages, domain, order):
         return self \
             .env["commown_translation_manager.translation_request_stage"] \
             .search([])
 
     stage_id = fields.Many2one(
         "commown_translation_manager.translation_request_stage",
-        group_expand="_read_group_stages_ids",
-        track_visibility="is_closed",
+        group_expand="_read_group_stage_ids",
         help="Select the current stage of the translation",
         required=True,
     )
