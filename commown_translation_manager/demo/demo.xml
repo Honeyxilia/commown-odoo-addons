@@ -3,7 +3,7 @@
     <record id="demo_content_site_1" model="commown_translation_manager.content_site">
         <field name="name">Demo site 1</field>
         <field name="url">https://demo_1.commown.coop</field>
-        <field 
+        <field
             name="supported_langs"
             eval="[[ref('base.fr')], [ref('base.de')]]"
         />
@@ -12,7 +12,7 @@
     <record id="demo_content_site_2" model="commown_translation_manager.content_site">
         <field name="name">Demo site 2</field>
         <field name="url">https://demo_2.commown.coop</field>
-        <field 
+        <field
             name="supported_langs"
             eval="[[ref('base.fr')], [ref('base.de')]]"
         />

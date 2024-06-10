@@ -70,9 +70,9 @@ class TranslationRequest(models.Model):
 
     @api.model
     def _read_group_stage_ids(self, stages, domain, order):
-        return self \
-            .env["commown_translation_manager.translation_request_stage"] \
-            .search([])
+        return self.env["commown_translation_manager.translation_request_stage"].search(
+            []
+        )
 
     stage_id = fields.Many2one(
         "commown_translation_manager.translation_request_stage",
@@ -97,6 +97,5 @@ class TranslationRequest(models.Model):
                     f" ({record.origin_lang.code} -> {record.target_lang.code})",
                 )
             )
-        
-        return result
 
+        return result

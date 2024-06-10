@@ -15,11 +15,10 @@
         "data/translation_request_stages.xml",
         "demo/demo.xml",
         "views/translation_teams_config.xml",
-        "views/content_site_config.xml", 
+        "views/content_site_config.xml",
         "views/requests_kanban.xml",
         "views/sites_kanban.xml",
         "views/action_buttons.xml",
     ],
-    "demo": [
-    ],
+    "demo": [],
 }

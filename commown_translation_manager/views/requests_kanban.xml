@@ -62,7 +62,7 @@
                                 </div>
                                 <div class="col-4">
                                     <div class="oe_kanban_bottom_right">
-                                        <img 
+                                        <img
                                             t-att-src="kanban_image('res.partner', 'image_small', record.translator_id.raw_value)"
                                             t-att-alt="record.translator_id.value"
                                             width="24" height="24"

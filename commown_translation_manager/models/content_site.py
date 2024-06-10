@@ -40,7 +40,7 @@ class ContentSite(models.Model):
             .search([("origin_t10n_id.content_id.site_id", "=", self.id)])
             .ids
         )
-        
+
         domain = "[('id', 'in', [%s])]" % ",".join(str(_id) for _id in req_ids)
 
         return {
