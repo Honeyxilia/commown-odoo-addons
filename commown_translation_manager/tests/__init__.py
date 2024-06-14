@@ -1,3 +1,3 @@
-from . import translator_manager_common
-from . import translator_manager_tests_requests
-from . import translator_manager_tests_content
+from . import test_translator_manager_common
+from . import test_translator_manager_requests
+from . import test_translator_manager_content

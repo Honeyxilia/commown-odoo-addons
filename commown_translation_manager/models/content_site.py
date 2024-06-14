@@ -52,3 +52,28 @@ class ContentSite(models.Model):
             "domain": domain,
             "target": "current",
         }
+
+    def new_content(self, title, url_path, base_ver_lang, content_url_path=""):
+        """
+        Create a content and all corresponding versions 
+        after a new content is detected.
+        """
+        created_content = self.env["commown_translator_manager.content"].create({
+            "name": title,
+            "site_id": this.id,
+            "url_path": url_path,
+        })
+
+        self.env["commown_translation_manager.version"].create({
+            "content_id": created_content.id,
+            "url_path": content_url_path if content_url_path else url_path,
+            "language": base_ver_lang,
+            "modification_date": 1
+        })
+
+        for lang in this.supported_langs:
+            if lang == base_ver_lang:
+                continue 
+            pass
+
+        self.env.cr.commit()

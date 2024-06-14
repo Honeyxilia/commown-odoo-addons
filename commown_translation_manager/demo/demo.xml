@@ -14,7 +14,7 @@
         <field name="url">https://demo_2.commown.coop</field>
         <field
             name="supported_langs"
-            eval="[[ref('base.fr')], [ref('base.de')]]"
+            eval="[[ref('base.fr')], [ref('base.de')], [ref('base.en')]]"
         />
     </record>
 
