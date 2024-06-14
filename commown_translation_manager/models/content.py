@@ -34,14 +34,3 @@ class Content(models.Model):
         comodel_name="commown_translation_manager.translation_request",
         inverse_name = "content_id",
     )
-
-    def create_request(self, origin_lang, diff):
-        """
-        Checks for existing requests and
-        creates/modify an existing request accordingly
-        """
-        content_translation_requests = self.env["commown_translation_manager.translationrequests"].search([
-            ("content_id", "=", self.id)
-        ])
-
-

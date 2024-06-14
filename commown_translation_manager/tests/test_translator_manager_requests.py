@@ -9,9 +9,9 @@ class TranslatorManagerRequestsTC(TranslatorManagerCommonTC):
         """
         Tests whether the creation of a new request is functionnal
         """
-        content_version = self.env.ref("commown_translation_manager.demo_translation_1_fr")
-        diff = "This is a diff of a file \n lalalala"
-        
+        content_version = self.env.ref("commown_translation_manager.demo_translation_2_de")
+        author = self.env['res.partner'].search([("id", "=", 13757)])
+        diff = "This is a diff of a file \n c:"
 
         content_version.content_id.create_request()
     

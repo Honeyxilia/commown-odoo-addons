@@ -31,3 +31,13 @@ class ContentVersion(models.Model):
         "Last modification date",
         required=True,
     )
+
+    def create_request(self, diff, author):
+        """
+        Checks for existing requests and
+        creates/modify an existing request accordingly
+        """
+        content_translation_requests = self.env["commown_translation_manager.translationrequests"].search([
+            ("content_id", "=", self.id)
+        ])
+
