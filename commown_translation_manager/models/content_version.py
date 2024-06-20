@@ -37,7 +37,45 @@ class ContentVersion(models.Model):
         Checks for existing requests and
         creates/modify an existing request accordingly
         """
-        content_translation_requests = self.env["commown_translation_manager.translationrequests"].search([
-            ("content_id", "=", self.id)
+
+        content_versions = self.env["commown_translation_manager.content_version"].search([
+            ("content_id", "=", self.content_id)
         ])
 
+        content_langs = [lambda ver : ver.language for ver in content_versions]
+
+        # Processing requests with current version as origin
+        content_translation_requests_with_origin_ver = self.env["commown_translation_manager.translation_request"].search([
+            ("origin_t10n_id", "=", self.id),
+            ("is_closed", "=", False), 
+        ])
+
+        for req in content_translation_requests_with_origin_ver:
+            content_langs.remove(req.target_lang)
+
+        # Processing requests with current version as target
+        content_translation_requests_with_target_ver = self.env["commown_translation_manager.translation_request"].search([
+            ("origin_t10n_id", "=", self.id),
+            ("is_closed", "=", False), 
+        ])
+
+        for req in content_translation_requests_with_target_ver:
+            content_langs.remove(req.origin_lang)
+            req.message_post(
+                body=f"New modification to report :\n{diff}",
+                message_type="comment"
+            )
+            
+            
+        # Creating a request for each remaining language
+        for ver in content_versions:
+            if ver.language not in content_langs:
+                continue
+
+            self.env['commown_translation_manager.translation_request'].create({
+                "origin_t10n_id": self.id,
+                "target_t10n_id": ver.id,
+                "authors": [(4, author.id)],
+                "diffs": diffs,
+                "stage_id": self.env.ref("commown_translation_manager.stage_new").id,
+            })

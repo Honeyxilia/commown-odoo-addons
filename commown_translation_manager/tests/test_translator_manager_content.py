@@ -19,12 +19,23 @@ class TranslatorManagerTestContent(TransactionCase):
         content_title = "This is a test dummy"
         url_path = "/test_content"
 
-        self.demo_content_site_1.new_content(content_title, url_path, origin_lang)
+        test_created_content = self.demo_content_site_1.new_content(content_title, url_path, origin_lang)
 
-        self.assertIsNotNone(None)
+        self.assertEqual(
+            self.env['commown_translation_manager.content_version'].search_count([
+                ("content_id", "=", test_created_content.id)
+            ]),
+            2
+        )
 
     def test_delete_content(self):
         pass
 
     def test_delete_version(self):
-        pass
+        self.assertEqual(
+            self.env['commown_translation_manager.content_version'].search_count([
+                ("content_id", "=", 0),
+                ("language", "=", "fr")
+            ]),
+            0
+        )

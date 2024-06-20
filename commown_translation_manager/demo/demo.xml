@@ -103,11 +103,4 @@
         <field name="stage_id" ref="stage_ongoing"/>
     </record>
 
-    <!-- Requêtes (Site 2) -->
-    <record id="demo_request_3_fr_to_de" model="commown_translation_manager.translation_request">
-        <field name="origin_t10n_id" ref="demo_translation_3_fr"/>
-        <field name="target_t10n_id" ref="demo_translation_3_de"/>
-        <field name="diffs">Test 3</field>
-        <field name="stage_id" ref="stage_new"/>
-    </record>
 </odoo>
