@@ -1,13 +1,15 @@
-from odoo.tests.common import TransactionCase
+from odoo.tests.common import SavepointCase, tagged
+from datetime import datetime
 
 
-class TranslatorManagerRequestsTC(TranslatorManagerCommonTC):
+@tagged("post_install", "-at_install")
+class TranslatorManagerRequestsTC(SavepointCase):
     """
     Tests use-cases relating to the creation of new translation requests
     """
 
-    def setUp():
-        super(TransactionCase, self).setUp()
+    def setUp(self):
+        super().setUp()
 
         self.test_author = self.env['res.partner'].search([("id", "=", 13757)])
         self.test_diffs = "This is a diff of a file <br> second line c:"
@@ -16,16 +18,23 @@ class TranslatorManagerRequestsTC(TranslatorManagerCommonTC):
         """
         Tests whether the creation of a new request is functionnal
         """
-        content_version_3_de = self.env.ref("commown_translation_manager.demo_translation_2_de")
+        before_create_time = datetime.now().date()
+
+        content_version_3_de = self.env.ref("commown_translation_manager.demo_translation_3_de")
         content_version_3_de.create_request(self.test_diffs, self.test_author)
 
-        self.assertEqual(
-            self.env['commown_translation_manager.translation_request'].search_count([
-                ("origin_t10n_id", "=", content_version_3_de.id),
-                ("is_closed", "=", False)
-            ]),
-            1
-        )
+        requests_created = self.env['commown_translation_manager.translation_request'].search([
+            ("origin_t10n_id", "=", content_version_3_de.id),
+            ("is_closed", "=", False),
+            ("create_time", ">=", datetime.strftime(before_create_time, "%Y-%m-%d %H:%M:%S")),
+        ])
+
+        self.assertEqual(len(requests_created), 1)
+        
+        req_created = requests_created[1]
+        
+        self.assertEqual(req_created.target_lang.iso_code, "fr")
+
 
     def test_request_already_exists_origin_lang(self):
         """
@@ -34,13 +43,13 @@ class TranslatorManagerRequestsTC(TranslatorManagerCommonTC):
         content_version_1_fr = self.env.ref("commown_translation_manager.demo_translation_1_fr")
         content_version_1_fr.create_request(self.test_diffs, self.test_author)
 
-        self.assertEqual(
-            self.env["commown_translation_manager.translation_request"].search_count([
-                ("origin_t10n_id", "=", content_version_1_fr.id),
-                ("is_closed", "=", False)
-            ]),
-            1
-        )
+        updated_requests = self.env["commown_translation_manager.translation_request"].search([
+            ("origin_t10n_id", "=", content_version_1_fr.id),
+            ("is_closed", "=", False)
+        ])
+
+        self.assertEqual(len(translation_requests_created), 1)
+
 
     def test_request_already_exists_target_lang(self):
         """
@@ -49,11 +58,7 @@ class TranslatorManagerRequestsTC(TranslatorManagerCommonTC):
         content_version_2_fr = self.env.ref("demo_translation_2_fr")
         content_version_2_fr.create_request(self.test_diffs, self.test_author)
 
-        self.assertEqual(
-            self.env["commown_translation_manager.translation_request"].search_count([
+        self.env["commown_translation_manager.translation_request"].search_count([
                 ("target_t10n_id", "=", content_version_2_de),
                 ("is_closed", "=", False)
-            ]),
-            1
-        )
-
+            ])

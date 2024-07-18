@@ -32,11 +32,13 @@ class ContentVersion(models.Model):
         required=True,
     )
 
-    def create_request(self, diff, author):
+    def create_request(self, req_diff, author):
         """
         Checks for existing requests and
         creates/modify an existing request accordingly
         """
+
+        self.modification_date = fields.Datetime.now()
 
         content_versions = self.env["commown_translation_manager.content_version"].search([
             ("content_id", "=", self.content_id)
@@ -52,6 +54,8 @@ class ContentVersion(models.Model):
 
         for req in content_translation_requests_with_origin_ver:
             content_langs.remove(req.target_lang)
+            req.authors.append((6, 0, author.id))
+            req.diffs += f"<br>___________<br>New modification detected on {self.modification_date.strftime('%y-%m-%d-%H-%M')}"
 
         # Processing requests with current version as target
         content_translation_requests_with_target_ver = self.env["commown_translation_manager.translation_request"].search([
@@ -62,7 +66,7 @@ class ContentVersion(models.Model):
         for req in content_translation_requests_with_target_ver:
             content_langs.remove(req.origin_lang)
             req.message_post(
-                body=f"New modification to report :\n{diff}",
+                body=f"New modification to report :\n{req_diff}",
                 message_type="comment"
             )
             
@@ -75,7 +79,7 @@ class ContentVersion(models.Model):
             self.env['commown_translation_manager.translation_request'].create({
                 "origin_t10n_id": self.id,
                 "target_t10n_id": ver.id,
-                "authors": [(4, author.id)],
-                "diffs": diffs,
+                "authors": [(6, 0, author.id)],
+                "diffs": req_diff,
                 "stage_id": self.env.ref("commown_translation_manager.stage_new").id,
             })

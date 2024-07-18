@@ -1,9 +1,10 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class Content(models.Model):
     _name = "commown_translation_manager.content"
     _description = "Textual content"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
 
     _sql_constraints = [
         ("url_path_uniq", "unique (url_path)", "Content already exists!"),
@@ -34,3 +35,15 @@ class Content(models.Model):
         comodel_name="commown_translation_manager.translation_request",
         inverse_name = "content_id",
     )
+
+    @api.model
+    @api.returns("self", lambda value: value.id)
+    def create(self, vals):
+        new_content = super().create(vals)
+        translators_teams = self.env["commown_translation_manager.translation_team"].search([
+            ("target_lang", "in", new_content.site_id.supported_langs.ids),
+        ])
+
+        new_content.message_subscribe(translators_teams.mapped("translator_ids"))
+        # TODO : Post a message with a template to prompt other languages of a translation
+        return new_content

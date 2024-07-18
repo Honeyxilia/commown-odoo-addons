@@ -30,6 +30,12 @@ class TranslationRequest(models.Model):
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _description = "Translation request of a content"
 
+    create_date = fields.Datetime(
+        "Created On",
+        readonly=True,
+        index=True
+    )
+
     origin_t10n_id = fields.Many2one(
         "commown_translation_manager.version",
         required=True,

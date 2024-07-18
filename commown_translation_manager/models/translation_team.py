@@ -9,7 +9,7 @@ class TranslationTeam(models.Model):
         required=True,
     )
 
-    translators = fields.Many2many(
+    translator_ids = fields.Many2many(
         "res.users",
         domain="[('share','=',False)]",
     )
