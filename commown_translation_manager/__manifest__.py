@@ -18,6 +18,7 @@
         "views/requests_kanban.xml",
         "views/sites_kanban.xml",
         "views/action_buttons.xml",
+        "demo/demo.xml",
     ],
     "demo": [
         "demo/demo.xml",

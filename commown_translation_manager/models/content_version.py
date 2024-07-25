@@ -27,7 +27,7 @@ class ContentVersion(models.Model):
         required=True,
     )
 
-    modification_date = fields.Date(
+    modification_date = fields.Datetime(
         "Last modification date",
         required=True,
     )
@@ -40,8 +40,8 @@ class ContentVersion(models.Model):
 
         self.modification_date = fields.Datetime.now()
 
-        content_versions = self.env["commown_translation_manager.content_version"].search([
-            ("content_id", "=", self.content_id)
+        content_versions = self.env["commown_translation_manager.version"].search([
+            ("content_id", "=", self.content_id.id)
         ])
 
         content_langs = [lambda ver : ver.language for ver in content_versions]
@@ -77,6 +77,7 @@ class ContentVersion(models.Model):
                 continue
 
             self.env['commown_translation_manager.translation_request'].create({
+                "create_date": self.modification_date,
                 "origin_t10n_id": self.id,
                 "target_t10n_id": ver.id,
                 "authors": [(6, 0, author.id)],

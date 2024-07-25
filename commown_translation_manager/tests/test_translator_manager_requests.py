@@ -1,5 +1,5 @@
 from odoo.tests.common import SavepointCase, tagged
-from datetime import datetime
+from odoo import fields
 
 
 @tagged("post_install", "-at_install")
@@ -18,7 +18,7 @@ class TranslatorManagerRequestsTC(SavepointCase):
         """
         Tests whether the creation of a new request is functionnal
         """
-        before_create_time = datetime.now().date()
+        before_create_time = fields.Datetime.now()
 
         content_version_3_de = self.env.ref("commown_translation_manager.demo_translation_3_de")
         content_version_3_de.create_request(self.test_diffs, self.test_author)
@@ -26,7 +26,7 @@ class TranslatorManagerRequestsTC(SavepointCase):
         requests_created = self.env['commown_translation_manager.translation_request'].search([
             ("origin_t10n_id", "=", content_version_3_de.id),
             ("is_closed", "=", False),
-            ("create_time", ">=", datetime.strftime(before_create_time, "%Y-%m-%d %H:%M:%S")),
+            ("create_date", ">=", datetime.strftime(before_create_time, "%Y-%m-%d %H:%M:%S")),
         ])
 
         self.assertEqual(len(requests_created), 1)

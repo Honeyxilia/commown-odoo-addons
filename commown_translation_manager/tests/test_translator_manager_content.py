@@ -1,6 +1,5 @@
 from odoo.tests.common import SavepointCase, tagged
 
-
 @tagged("post_install", "-at_install")
 class TranslatorManagerContentTC(SavepointCase):
     """

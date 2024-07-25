@@ -26,7 +26,7 @@
                     <field name="target_lang"/>
                 </group>
                 <group name="translators">
-                    <field name="translators" widget="many2many_tags"/>
+                    <field name="translator_ids" widget="many2many_tags"/>
                 </group>
             </form>
         </field>
