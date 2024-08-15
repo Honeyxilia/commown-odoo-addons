@@ -21,11 +21,11 @@ class TranslatorManagerContentTC(SavepointCase):
 
         test_created_content = self.demo_content_site_1.new_content(content_title, url_path, origin_lang)
 
-        created_content_versions = self.env['commown_translation_manager.content_version'].search_count([
+        created_content_versions = self.env['commown_translation_manager.version'].search([
             ("content_id", "=", test_created_content.id)
         ])
 
-        self.assertEqual(len(created_content_versiwons.ids), 2)
+        self.assertEqual(len(created_content_versions.ids), 1)
 
     def test_delete_content(self):
         pass

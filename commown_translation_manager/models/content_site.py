@@ -71,4 +71,4 @@ class ContentSite(models.Model):
             "modification_date": fields.Datetime.now()
         })
 
-        created_content.send_versions_invites(base_ver_lang)
+        return created_content

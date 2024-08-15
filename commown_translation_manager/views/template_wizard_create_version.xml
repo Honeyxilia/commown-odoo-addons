@@ -1,0 +1,9 @@
+<?xml version="1.0"/>
+
+<odoo>
+
+    <template id="template_wizard_create_version">
+
+    </template>
+
+</odoo>

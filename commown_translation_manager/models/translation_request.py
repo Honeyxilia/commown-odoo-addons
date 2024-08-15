@@ -38,11 +38,13 @@ class TranslationRequest(models.Model):
 
     origin_t10n_id = fields.Many2one(
         "commown_translation_manager.version",
+        string="Origin",
         required=True,
     )
 
     target_t10n_id = fields.Many2one(
         "commown_translation_manager.version",
+        string="Dest.",
         required=True,
     )
 
@@ -100,7 +102,7 @@ class TranslationRequest(models.Model):
                 (
                     record.id,
                     f"{record.origin_t10n_id.content_id.name}"
-                    f" ({record.origin_lang.code} -> {record.target_lang.code})",
+                    f" ({record.origin_lang.iso_code.upper()} -> {record.target_lang.iso_code.upper()})",
                 )
             )
 

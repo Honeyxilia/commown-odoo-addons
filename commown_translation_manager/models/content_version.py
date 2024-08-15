@@ -1,4 +1,5 @@
 from odoo import fields, models
+import ipdb
 
 
 class ContentVersion(models.Model):
@@ -41,10 +42,13 @@ class ContentVersion(models.Model):
         self.modification_date = fields.Datetime.now()
 
         content_versions = self.env["commown_translation_manager.version"].search([
-            ("content_id", "=", self.content_id.id)
+            ("content_id", "=", self.content_id.id),
+            ("id", "!=", self.id)
         ])
 
-        content_langs = [lambda ver : ver.language for ver in content_versions]
+        content_langs = []
+        for ver in content_versions:
+            content_langs += ver.language
 
         # Processing requests with current version as origin
         content_translation_requests_with_origin_ver = self.env["commown_translation_manager.translation_request"].search([
@@ -59,7 +63,7 @@ class ContentVersion(models.Model):
 
         # Processing requests with current version as target
         content_translation_requests_with_target_ver = self.env["commown_translation_manager.translation_request"].search([
-            ("origin_t10n_id", "=", self.id),
+            ("target_t10n_id", "=", self.id),
             ("is_closed", "=", False), 
         ])
 
@@ -69,18 +73,21 @@ class ContentVersion(models.Model):
                 body=f"New modification to report :\n{req_diff}",
                 message_type="comment"
             )
-            
-            
+
         # Creating a request for each remaining language
+        created_reqs = []
+
+        stage_new = self.env.ref("commown_translation_manager.stage_new")
         for ver in content_versions:
             if ver.language not in content_langs:
                 continue
 
-            self.env['commown_translation_manager.translation_request'].create({
+            created_reqs += self.env['commown_translation_manager.translation_request'].create({
                 "create_date": self.modification_date,
                 "origin_t10n_id": self.id,
                 "target_t10n_id": ver.id,
-                "authors": [(6, 0, author.id)],
+                "authors": (6, 0, author.id),
                 "diffs": req_diff,
-                "stage_id": self.env.ref("commown_translation_manager.stage_new").id,
+                "stage_id": stage_new.id,
             })
+            ipdb.set_trace()

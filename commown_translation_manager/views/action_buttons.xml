@@ -24,6 +24,12 @@
         sequence="10"
         parent="menu_commown_translation_manager_root"/>
 
+        <menuitem 
+        id="menu_config_teams"
+        action="action_teams"
+        sequence="10"
+        parent="menu_config"/>
+
     <menuitem 
         id="menu_config_site"
         action="action_sites_config"
@@ -31,8 +37,8 @@
         parent="menu_config"/>
     
     <menuitem 
-        id="menu_config_teams"
-        action="action_teams"
+        id="menu_config_content"
+        action="action_content_config"
         sequence="30"
         parent="menu_config"/>
 

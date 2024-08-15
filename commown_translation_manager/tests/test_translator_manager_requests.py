@@ -1,5 +1,6 @@
-from odoo.tests.common import SavepointCase, tagged
+from datetime import datetime
 from odoo import fields
+from odoo.tests.common import SavepointCase, tagged
 
 
 @tagged("post_install", "-at_install")
@@ -21,7 +22,7 @@ class TranslatorManagerRequestsTC(SavepointCase):
         before_create_time = fields.Datetime.now()
 
         content_version_3_de = self.env.ref("commown_translation_manager.demo_translation_3_de")
-        content_version_3_de.create_request(self.test_diffs, self.test_author)
+        rtn_value = content_version_3_de.create_request(self.test_diffs, self.test_author)
 
         requests_created = self.env['commown_translation_manager.translation_request'].search([
             ("origin_t10n_id", "=", content_version_3_de.id),
@@ -29,9 +30,9 @@ class TranslatorManagerRequestsTC(SavepointCase):
             ("create_date", ">=", datetime.strftime(before_create_time, "%Y-%m-%d %H:%M:%S")),
         ])
 
-        self.assertEqual(len(requests_created), 1)
+        self.assertEqual(len(requests_created.ids), 1)
         
-        req_created = requests_created[1]
+        req_created = requests_created[0]
         
         self.assertEqual(req_created.target_lang.iso_code, "fr")
 
@@ -59,6 +60,6 @@ class TranslatorManagerRequestsTC(SavepointCase):
         content_version_2_fr.create_request(self.test_diffs, self.test_author)
 
         self.env["commown_translation_manager.translation_request"].search_count([
-                ("target_t10n_id", "=", content_version_2_de),
-                ("is_closed", "=", False)
-            ])
+            ("target_t10n_id", "=", content_version_2_de),
+            ("is_closed", "=", False)
+        ])
