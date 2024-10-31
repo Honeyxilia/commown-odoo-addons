@@ -19,11 +19,11 @@
                                 <field name="url"/>
                             </p>
                             <div class="o_kanban_tags_section">
-                                <ul>
-                                    <t t-foreach="record.supported_langs.raw_value" t-as="lang">
-                                        <li t-esc="lang.raw_value"/>
+                                <!--<ul>
+                                    <t t-foreach="record.supported_langs" t-as="lang">
+                                        <li t-esc="lang.iso_code"/>
                                     </t>
-                                </ul>
+                                </ul>-->
                             </div>
                         </div>
                     </t>
