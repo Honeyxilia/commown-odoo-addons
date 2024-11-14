@@ -109,7 +109,7 @@
                     <t t-set="step">3</t>
                   </t>
 
-                  <t t-call="commown_self_troubleshooting.step-confirm-change">
+                  <t t-call="commown_self_troubleshooting.step-confirm-module-change">
                     <t t-set="step">4</t>
                   </t>
 
