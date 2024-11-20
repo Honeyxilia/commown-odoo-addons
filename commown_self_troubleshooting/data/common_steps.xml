@@ -97,9 +97,9 @@
             d'un téléphone à l'autre).
           </p>
           <p>
-          NB : En faisant un minimum attention il n'y a aucun danger d'abîmer les pièces,
-          le Fairphone est vraiment conçu pour ça, c’est la magie d’un appareil modulaire ! :-)
-</p>
+            NB : En faisant un minimum attention il n'y a aucun danger d'abîmer les pièces,
+            le Fairphone est vraiment conçu pour ça, c’est la magie d’un appareil modulaire ! :-)
+          </p>
         </div>
         <div t-attf-id="form-step-{{ step }}" role="form" data-toggle="validator">
           <div class="form-group">
