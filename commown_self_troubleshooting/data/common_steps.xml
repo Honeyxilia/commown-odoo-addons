@@ -19,6 +19,26 @@
       </p>
     </template>
 
+    <template id="tool_form">
+      <div class="form-group" id="tool_form">
+        <p>
+          Afin d'effectuer le remplacment du module, vous aurez besoin d’un tournevis cruciforme, de taille #0 (voir
+          <a target="_blank" href="https://eustore.ifixit.com/fr/Outils/Tournevis-Cles/Tournevis-cruciforme-Phillips-n-0-iFixit-made-in-Germany.html">ici <i class="fas fa-external-link-alt"></i></a>
+          ). Nous pouvons vous en prêter un à nous retourner ensuite avec le module en panne.
+        </p>
+
+        <p>Avez-vous besoin que nous vous prêtions un tournevis ?</p>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="screwdriver" id="screwdriver-yes" value="yes" required="required" disabled="disabled"/>
+          <label class="form-check-label" for="screwdriver-yes">Oui</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="screwdriver" id="screwdriver-no" value="no" required="required" disabled="disabled"/>
+          <label class="form-check-label" for="screwdriver-no">Non</label>
+        </div>
+      </div>
+    </template>
+
     <template id="step-contract-choice">
       <div id="step-0" class="tab-pane" role="tabpanel" aria-labelledby="step-0">
         <div class="row align-items-center">
@@ -111,9 +131,28 @@
             </select>
             <div class="help-block with-errors" />
           </div>
-        </div>
+          
+          <t t-call="commown_self_troubleshooting.tool_form"/>
 
+          <script type="text/javascript">
+            $(document).ready(function() {
+              $("#tool_form").toggle(false);
+
+              $("#type_contrat").change(function () {
+                var $select_contract = $("#type_contrat");
+                var customer_manipulating = $select_contract.val() === "me";
+
+                $("#tool_form").toggle(customer_manipulating);
+                $("#tool_form")
+                  .find("input")
+                  .attr('disabled', !customer_manipulating);
+              });
+            });
+          </script>
+        </div>
       </div>
+
+      
     </template>
 
     <template id="step-ship-module">
@@ -337,8 +376,7 @@
 
         <div t-attf-id="form-step-{{ step }}" role="form" data-toggle="validator">
 
-          <t t-raw="tool_intro or ''" />
-          <t t-raw="tool_form or ''" />
+          <t t-if="display_tool_form" t-call="commown_self_troubleshooting.tool_form"/>
 
           <div class="form-group">
             <label t-attf-for="more_info_step_{{ step }}">Ajoutez ici toute information que vous jugerez utile :</label>
@@ -359,29 +397,7 @@
     <template id="step-confirm-module-change">
       <t t-call="commown_self_troubleshooting.step-confirm-change">
 
-        <t t-set="tool_intro">
-        <!-- TODO : Modifier le type de tournevis en fonction de l'appareil -->
-          <p>
-            Afin d'effectuer le remplacment du module, vous aurez besoin d’un tournevis cruciforme, de taille #0 (voir
-            <a target="_blank" href="https://eustore.ifixit.com/fr/Outils/Tournevis-Cles/Tournevis-cruciforme-Phillips-n-0-iFixit-made-in-Germany.html">ici <i class="fas fa-external-link-alt"></i></a>
-            ). Nous pouvons vous en prêter un à nous retourner ensuite avec le module en panne.
-          </p>
-        </t>
-
-        <t t-set="tool_form">
-          <div class="form-group">
-            <p>Avez-vous besoin que nous vous prêtions un tournevis ?</p>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="screwdriver" id="screwdriver-yes" value="yes" required="required"/>
-              <label class="form-check-label" for="screwdriver-yes">Oui</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="radio" name="screwdriver" id="screwdriver-no" value="no" required="required"/>
-              <label class="form-check-label" for="screwdriver-no">Non</label>
-            </div>
-          </div>
-        </t>
-
+        <t t-set="display_tool_form" t-value="true"/>
       </t>
     </template>
 
