@@ -118,7 +118,7 @@
       <field name="category_id" eval="ref('shiftphone-ts-cat')"/>
       <field name="website_page_id" eval="ref('shiftphone-screen-page')" />
       <field name="requires_contract" eval="True"/>
-      <field name="contract_domain">[("contract_template_id.name", "like", "SHIFT/%")]</field>
+      <field name="contract_domain">[("contract_template_id.name", "like", "SHIF/%")]</field>
     </record>
 
     <record id="gs-day-ts-item" model="commown_self_troubleshooting.item">
