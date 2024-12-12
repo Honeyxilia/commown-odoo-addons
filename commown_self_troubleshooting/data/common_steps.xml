@@ -22,9 +22,19 @@
     <template id="tool_form">
       <div class="form-group" id="tool_form">
         <p>
-          Afin d'effectuer le remplacment du module, vous aurez besoin d’un tournevis cruciforme, de taille #0 (voir
-          <a target="_blank" href="https://eustore.ifixit.com/fr/Outils/Tournevis-Cles/Tournevis-cruciforme-Phillips-n-0-iFixit-made-in-Germany.html">ici <i class="fas fa-external-link-alt"></i></a>
-          ). Nous pouvons vous en prêter un à nous retourner ensuite avec le module en panne.
+          Afin d'effectuer le remplacment du module, vous aurez besoin d’un tournevis 
+          <a t-if="model == 'Shiftphone'">
+            Torx, de taille #5 (voir
+            <a target="_blank" href="https://www.ifixit.com/fr-fr/products/t5-torx-screwdriver">ici <i class="fas fa-external-link-alt"></i></a>
+            ).
+          </a>
+
+          <a t-else="">
+            cruciforme, de taille #0 (voir
+            <a target="_blank" href="https://www.ifixit.com/fr-fr/products/phillips-0-screwdriver">ici <i class="fas fa-external-link-alt"></i></a>
+            ).
+          </a>
+          Nous pouvons vous en prêter un à nous retourner ensuite avec le module en panne.
         </p>
 
         <p>Avez-vous besoin que nous vous prêtions un tournevis ?</p>
@@ -33,7 +43,7 @@
           <label class="form-check-label" for="screwdriver-yes">Oui</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="radio" name="screwdriver" id="screwdriver-no" value="no" required="required" disabled="disabled"/>
+          <input class="form-check-input" type="radio" name="screwdriver" id="screwdriver-no" value="no" required="required" disabled="disabled" checked="checked"/>
           <label class="form-check-label" for="screwdriver-no">Non</label>
         </div>
       </div>
@@ -132,7 +142,9 @@
             <div class="help-block with-errors" />
           </div>
           
-          <t t-call="commown_self_troubleshooting.tool_form"/>
+          <t t-call="commown_self_troubleshooting.tool_form">
+            <t t-set="model" t-value="model"/>
+          </t>
 
           <script type="text/javascript">
             $(document).ready(function() {
