@@ -8,7 +8,6 @@ from odoo.tests.common import ChromeBrowser
 
 from odoo.addons.commown_devices.tests.common import DeviceAsAServiceTC
 
-
 @contextmanager
 def chrome_suppress_origin():
     old_open_websocket = ChromeBrowser._open_websocket
@@ -106,6 +105,10 @@ class TestPageSmartphone(TestPageTC):
         self._run_tour(
             "commown_self_troubleshooting_smartphone_need_display_and_tool"
         )
+    
+    def test_smartphone_need_new_screen_for_crosscall(self):
+        self.contract_name = "CC/B2C"
+        self._run_tour("commown_self_troubleshooting_need_new_screen_for_crosscall")
 
     def test_need_new_fairphone(self):
         self.contract_name = "FP5/B2C"
