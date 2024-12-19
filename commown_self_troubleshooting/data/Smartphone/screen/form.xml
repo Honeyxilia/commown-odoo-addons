@@ -170,6 +170,7 @@
 
                 <t t-call="commown_self_troubleshooting.step-manipulation-option">
                   <t t-set="step">4</t>
+                  <t t-set="model" t-value="model"/>
                 </t>
 
                 <t t-call="commown_self_troubleshooting.step-ship-module">
