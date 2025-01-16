@@ -10,6 +10,8 @@
         <t t-set="title">Commown - Besoin d'assistance - Smartphone : Mon écran (ou sa protection) est fissuré</t>
 
         <script type="text/javascript">
+          var _model = "<t t-esc='model'/>";
+
           $(document).ready(function() {
 
             const wizard = setUpWizard($('#smartwizard'));
@@ -20,7 +22,7 @@
             });
 
             $('input[type=radio][name=replace_screen]').change(function () {
-                 wizard.toggleStep(4, this.value==='yes');
+                wizard.toggleStep(4, _model !== 'Crosscall' &amp;&amp; this.value === 'yes');
             });
 
           });
@@ -168,6 +170,7 @@
 
                 <t t-call="commown_self_troubleshooting.step-manipulation-option">
                   <t t-set="step">4</t>
+                  <t t-set="model" t-value="model"/>
                 </t>
 
                 <t t-call="commown_self_troubleshooting.step-ship-module">
