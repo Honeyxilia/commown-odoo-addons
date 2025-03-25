@@ -9,6 +9,8 @@ from requests_toolbelt.multipart import decoder
 
 from odoo import _
 
+from odoo.addons.commown_res_partner_sms.models.common import normalize_phone
+
 _logger = logging.getLogger(__name__)
 
 MOBILE_TYPE = phonenumbers.PhoneNumberType.MOBILE
@@ -20,27 +22,6 @@ MAX_ADDRESS_SIZE_COLISSIMO = 35
 
 class ColissimoError(Exception):
     pass
-
-
-def normalize_phone(phone_number, country_code, raise_on_error=True):
-    """Format phone number for Colissimo
-
-    If phone number format is incorrect, raise if raise_on_error is True (default)
-    else return the empty string.
-
-    If the phone number is falsy, return the empty string.
-    """
-    if phone_number:
-        try:
-            tel = phonenumbers.parse(phone_number, country_code)
-        except phonenumbers.NumberParseException:
-            if raise_on_error:
-                raise
-        else:
-            return phonenumbers.format_number(
-                tel, phonenumbers.PhoneNumberFormat.NATIONAL
-            ).replace(" ", "")
-    return ""
 
 
 def delivery_data(partner, raise_on_error=True):
@@ -59,8 +40,8 @@ def delivery_data(partner, raise_on_error=True):
 
     country = partner.country_id.code or "FR"
 
-    mobile = normalize_phone(partner.mobile, country, raise_on_error)
-    fixed = normalize_phone(partner.phone, country, raise_on_error)
+    mobile = normalize_phone(partner.mobile, country, "national", raise_on_error)
+    fixed = normalize_phone(partner.phone, country, "national", raise_on_error)
 
     if not mobile and fixed:
         fixed_obj = phonenumbers.parse(partner.phone, partner.country_id.code)
@@ -83,8 +64,8 @@ def delivery_data(partner, raise_on_error=True):
         partner_data["line1"] = partner.street
         partner_data["line2"] = partner.street2
 
-    if partner.parent_id and partner.parent_id.is_company:
-        partner_data["companyName"] = partner.parent_id.name
+    if partner.commercial_company_name:
+        partner_data["companyName"] = partner.commercial_company_name
 
     if raise_on_error and not (
         partner_data["phoneNumber"] or partner_data["mobileNumber"]
@@ -196,7 +177,7 @@ def parse_multipart(http_resp):
 
 def parse_response(resp):
     ctype_main, _ctype_details = parse_header(resp.headers["Content-Type"])
-    if ctype_main == "multipart/mixed":
+    if ctype_main.startswith("multipart/"):
         return parse_multipart(resp)
     elif ctype_main == "application/json":
         return resp.json(), None

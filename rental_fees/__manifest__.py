@@ -2,7 +2,7 @@
     "name": "rental_fees",
     "category": "Business",
     "summary": "Commown module to compute fees to be paid to its device suppliers",
-    "version": "12.0.2.0.16",
+    "version": "12.0.2.0.26",
     "description": """
         Commown module to compute fees to be paid to its device suppliers.
     """,
@@ -17,10 +17,13 @@
         "report_py3o",
         "account_usability",  # for the invoice line's date_invoice field
         "contract_auto_merge_invoice",
+        "web_notify",
     ],
     "data": [
         "security/ir.model.access.csv",
+        "data/actions.xml",
         "data/mail_template.xml",
+        "views/purchase_order.xml",
         "views/rental_fees_computation.xml",
         "views/rental_fees_definition.xml",
         "views/rental_fees_report.xml",

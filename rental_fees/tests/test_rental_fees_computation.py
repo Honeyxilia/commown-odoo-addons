@@ -5,6 +5,9 @@ from dateutil.relativedelta import relativedelta
 
 from odoo import fields
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import mute_logger
+
+from odoo.addons.queue_job.tests.common import trap_jobs
 
 from .common import RentalFeesTC
 
@@ -81,7 +84,7 @@ class RentalFeesComputationTC(RentalFeesTC):
             }
         )
 
-    def compute(self, until_date, fees_def=None, run=True, invoice=False):
+    def compute(self, until_date, fees_def=None, run=True, invoice=False, sync=True):
         fees_def = fees_def or self.fees_def
 
         computation = self.env["rental_fees.computation"].create(
@@ -90,9 +93,13 @@ class RentalFeesComputationTC(RentalFeesTC):
                 "until_date": until_date,
             }
         )
-
         if run:
-            computation.action_run()
+            if sync:
+                with trap_jobs() as trap:
+                    computation.action_run()
+                trap.perform_enqueued_jobs()
+            else:
+                computation.action_run()
 
         if invoice:
             computation.action_invoice()
@@ -118,13 +125,7 @@ class RentalFeesComputationTC(RentalFeesTC):
         ).post()
 
     def test_open_job(self):
-        "Method open job should"
-        old_env = self.env
-        try:
-            self.env = self.env(context=dict(test_queue_job_no_delay=False))
-            comp = self.compute("2021-01-31")
-        finally:
-            self.env = old_env
+        comp = self.compute("2021-01-31", sync=False)
 
         self.assertEqual(comp.state, "running")
 
@@ -178,7 +179,7 @@ class RentalFeesComputationTC(RentalFeesTC):
         self.send_device("N/S 2", contract=contract2, date="2021-03-06")
         contract2.date_start = "2021-03-06"
 
-        device2 = contract2.quant_ids.lot_id
+        device2 = contract2.lot_ids
         self.scrap_device(device2, date(2021, 4, 5))
 
         self.create_invoices_until(contract1, "2021-05-01")
@@ -258,11 +259,17 @@ class RentalFeesComputationTC(RentalFeesTC):
             ],
         )
 
+        def _find_row_by_text(text, from_row=0):
+            for row in range(from_row, len(s_sum)):
+                if text in s_sum.row_at(row):
+                    return row
+            self.fail("Text %s not found after row %s" % (text, from_row))
+
         # Check the summary sheet:
         s_sum = ods.sheet_by_name("Global figures")
 
         # - Until date
-        self.assertEquals(s_sum[8, 2], "Situation at date: 04/30/2021")
+        _find_row_by_text("Situation at date: 04/30/2021")
 
         # - Amounts per fees definition
         expected = {
@@ -272,10 +279,15 @@ class RentalFeesComputationTC(RentalFeesTC):
             "Already invoiced since the beginning": 7.5,
             "Fees to be invoiced": 310.0,
         }
-        self.assertEquals(dict(zip(s_sum.row[10][2:7], s_sum.row[11][2:7])), expected)
+        _row = _find_row_by_text("Agreement")
+        self.assertEquals(
+            dict(zip(s_sum.row_at(_row)[2:7], s_sum.row_at(_row + 1)[2:7])), expected
+        )
         # - Amount totals
         expected["Agreement"] = "Totals"
-        self.assertEquals(dict(zip(s_sum.row[10][2:7], s_sum.row[12][2:7])), expected)
+        self.assertEquals(
+            dict(zip(s_sum.row_at(_row)[2:7], s_sum.row_at(_row + 2)[2:7])), expected
+        )
 
         # - Devices per fees def
         expected = {
@@ -285,10 +297,15 @@ class RentalFeesComputationTC(RentalFeesTC):
             "Nb of devices no longer operable": 1,
             "Nb of devices generating fees": 1,
         }
-        self.assertEquals(dict(zip(s_sum.row[14][2:7], s_sum.row[15][2:7])), expected)
+        _row = _find_row_by_text("Agreement", from_row=_row + 1)
+        self.assertEquals(
+            dict(zip(s_sum.row_at(_row)[2:7], s_sum.row_at(_row + 1)[2:7])), expected
+        )
         # - Devices totals
         expected["Agreement"] = "Totals"
-        self.assertEquals(dict(zip(s_sum.row[14][2:7], s_sum.row[16][2:7])), expected)
+        self.assertEquals(
+            dict(zip(s_sum.row_at(_row)[2:7], s_sum.row_at(_row + 2)[2:7])), expected
+        )
 
         s_dev = ods.sheet_by_name("Per device revenues")
         product_col = [c for c in s_dev.column[3] if c != "" and type(c) == str]
@@ -373,7 +390,12 @@ class RentalFeesComputationTC(RentalFeesTC):
 
         contract = self.env["contract.contract"].of_sale(self.so)[0]
         self.send_device("N/S 1", contract=contract, date=send_datetime)
-        contract.date_start = start_date
+        with trap_jobs() as trap:
+            contract.date_start = start_date
+        trap.assert_jobs_count(
+            1, only=contract.contract_line_ids._generate_forecast_periods
+        )
+        trap.perform_enqueued_jobs()
         self.create_invoices_until(contract, base_date)
 
         computation = self.compute(compute_date)
@@ -521,7 +543,7 @@ class RentalFeesComputationTC(RentalFeesTC):
         contract = self.env["contract.contract"].of_sale(self.so)[0]
         self.send_device("N/S 1", contract, "2021-02-01")
         contract.date_start = "2021-02-01"
-        device = contract.quant_ids.ensure_one().lot_id
+        device = contract.lot_ids.ensure_one()
         while contract.recurring_next_date <= date(2021, 4, 1):
             contract._recurring_create_invoice()
         self.receive_device("N/S 1", contract, "2021-04-01")
@@ -533,28 +555,41 @@ class RentalFeesComputationTC(RentalFeesTC):
         self.assertEqual(comp.compensation_details().mapped("fees"), [300.0])
         self.assertFalse(comp.rental_details().mapped("fees"))
 
-    def test_compute_excluded_device(self):
+    def _computation_with_excluded_device(self, **excluded_device_attrs):
         contract = self.env["contract.contract"].of_sale(self.so)[0]
         self.send_device("N/S 1", contract, "2021-02-01")
         contract.date_start = "2021-02-01"
-        device = contract.quant_ids.ensure_one().lot_id
+        device = contract.lot_ids.ensure_one()
         while contract.recurring_next_date <= date(2021, 3, 1):
             contract._recurring_create_invoice()
 
-        reason = "Used by an internal employee"
-        self.env["rental_fees.excluded_device"].create(
+        attrs = dict(
             {
                 "fees_definition_id": self.fees_def.id,
                 "device": device.id,
-                "reason": reason,
-            }
+            },
+            **excluded_device_attrs
         )
+        self.env["rental_fees.excluded_device"].create(attrs)
 
-        comp = self.compute("2022-03-01")
+        return self.compute("2022-03-01")
+
+    def test_compute_excluded_device_with_compensation(self):
+        comp = self._computation_with_excluded_device(
+            with_compensation=True,
+            reason="Used by an internal employee",
+        )
         self.assertEqual(
             comp.details("excluded_device_compensation").mapped("fees"),
             [300.0],
         )
+
+    def test_compute_excluded_device_without_compensation(self):
+        comp = self._computation_with_excluded_device(
+            with_compensation=False,
+            reason="Returned to the supplier",
+        )
+        self.assertFalse(comp.details("excluded_device_compensation"))
 
     def test_compute_monthly_fees_error_main_rental_line(self):
         contract = self.env["contract.contract"].of_sale(self.so)[0]
@@ -570,26 +605,15 @@ class RentalFeesComputationTC(RentalFeesTC):
 
         # Do the same computation but with an error in get_main_rental_service:
         rental_service.property_contract_template_id = False
-        with self.assertRaises(RuntimeError) as err:
-            self.compute("2021-05-01")
+        with mute_logger("odoo.addons.rental_fees.models.rental_fees_computation"):
+            with self.assertRaises(RuntimeError) as err:
+                self.compute("2021-05-01")
 
         # Check the generated error contains useful information
         exc = str(err.exception)
         self.assertIn("device: N/S 1", exc)
         self.assertIn(contract.name, exc)
         self.assertIn(self.fees_def.name, exc)
-
-    def test_fees_def_split_dates(self):
-        self.assertEqual(
-            {
-                date(2021, 3, 10): self.fees_def.line_ids[0],
-                date(2021, 6, 10): self.fees_def.line_ids[1],
-                None: self.fees_def.line_ids[2],
-            },
-            self.compute("2100-01-01")._fees_def_split_dates(
-                self.fees_def, date(2021, 1, 10)
-            ),
-        )
 
     def test_split_periods_wrt_fees_def_1(self):
         periods = [
@@ -619,6 +643,13 @@ class RentalFeesComputationTC(RentalFeesTC):
                 {
                     "contract": 1,
                     "from_date": date(2021, 3, 15),
+                    "to_date": date(2021, 4, 7),
+                    "fees_def_line": self.fees_def.line_ids[0],
+                    "is_forecast": False,
+                },
+                {
+                    "contract": 1,
+                    "from_date": date(2021, 4, 7),
                     "to_date": date(2021, 4, 15),
                     "fees_def_line": self.fees_def.line_ids[1],
                     "is_forecast": False,
@@ -679,6 +710,18 @@ class RentalFeesComputationTC(RentalFeesTC):
             self.compute("2100-01-01").split_periods_wrt_fees_def(
                 self.fees_def, periods
             ),
+        )
+
+    def test_split_periods_wrt_fees_def_error_no_line(self):
+        fees_def = self.fees_def.copy({"name": "error_fees_def", "line_ids": False})
+        compute = self.compute("2100-01-01", fees_def)
+
+        with self.assertRaises(UserError) as exc:
+            compute.split_periods_wrt_fees_def(fees_def, [])
+
+        self.assertEqual(
+            exc.exception.name,
+            "Fees definition error_fees_def (id %d) has no line." % fees_def.id,
         )
 
     def test_action_invoice_error(self):

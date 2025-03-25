@@ -3,8 +3,11 @@ from datetime import datetime, timedelta
 import mock
 
 from odoo.tests.common import SavepointCase, at_install, post_install
+from odoo.tools import mute_logger
 
 from odoo.addons.account_payment_slimpay.models.payment import SlimpayClient
+from odoo.addons.commown_res_partner_sms.models.common import normalize_phone
+from odoo.addons.queue_job.tests.common import trap_jobs
 
 
 class FakeDoc(dict):
@@ -162,6 +165,9 @@ class ProjectTC(SavepointCase):
         self.partner = ref("base.res_partner_3")
         self.partner.update(
             {
+                # Avoid SMS not sent warnings:
+                "mobile": "+33612345678",
+                "country_id": self.env.ref("base.fr").id,
                 "property_account_receivable_id": self.customer_account.id,
                 "payment_token_ids": [
                     (
@@ -454,21 +460,44 @@ class ProjectTC(SavepointCase):
         self.assertEqual(len(self._project_tasks()), 0)
         self.assertIssuesAcknowledged(act, "i1")
 
+    def test_reason_message(self):
+        act, get = self._execute_cron(
+            [
+                fake_issue_doc(
+                    id="i1",
+                    rejectReason="Insufficient funds",
+                    rejectReasonCode="AM04",
+                )
+            ]
+        )
+
+        tasks = self._project_tasks()
+        self.assertEqual(len(tasks), 1)
+        self.assertIn(
+            "Reject reason is AM04: Insufficient funds",
+            "\n".join(tasks.mapped("message_ids.body")),
+        )
+        self.assertIssuesAcknowledged(act, "i1")
+
     def _reset_on_time_actions_last_run(self):
         for action in self.env["base.automation"].search([("trigger", "=", "on_time")]):
             xml_ids = list(action.get_xml_id().values())
             if xml_ids and xml_ids[0].startswith("payment_slimpay_issue"):
                 action.last_run = False
 
-    def _simulate_wait(self, task, **timedelta_kwargs):
+    def _simulate_wait(self, task, check_job_function=False, **timedelta_kwargs):
         task.date_last_stage_update = datetime.utcnow() - timedelta(**timedelta_kwargs)
         task.invoice_next_payment_date = task.invoice_next_payment_date - timedelta(
             **timedelta_kwargs
         )
         self._reset_on_time_actions_last_run()
         with mock.patch.object(SlimpayClient, "action", side_effect=fake_action) as act:
-            # triggers actions based on time
-            self.env["base.automation"]._check()
+            with trap_jobs() as trap:
+                # triggers actions based on time
+                self.env["base.automation"]._check()
+            if check_job_function:
+                trap.assert_jobs_count(1, only=check_job_function)
+                trap.perform_enqueued_jobs()
         return act
 
     def test_actions(self):
@@ -486,7 +515,9 @@ class ProjectTC(SavepointCase):
         # Prepare to new payment:
         self.invoice.payment_move_line_ids.remove_move_reconcile()
 
-        act = self._simulate_wait(task, days=6)
+        act = self._simulate_wait(
+            task, days=6, check_job_function=task._slimpay_payment_issue_retry_payment
+        )
         self.assertInStage(task, "stage_retry_payment_and_wait")
         self.assertEqual(len(self._action_calls(act, "create-payins")), 1)
 
@@ -528,7 +559,9 @@ class ProjectTC(SavepointCase):
         last_msg = task.message_ids[0]
         self.assertEqual(last_msg.subject, "YourCompany: rejected payment")
 
-        act = self._simulate_wait(task, days=6)
+        act = self._simulate_wait(
+            task, days=6, check_job_function=task._slimpay_payment_issue_retry_payment
+        )
         self.assertInStage(task, "stage_retry_payment_and_wait")
         self.assertEqual(len(self._action_calls(act, "create-payins")), 1)
 
@@ -547,15 +580,23 @@ class ProjectTC(SavepointCase):
         self.assertEqual(new_fee_invoices.state, "open")
 
     def test_functional_3_trials(self):
-        act, get = self._execute_cron(
-            [
-                fake_issue_doc(
-                    id="i1", payment_ref="slimpay_ref_1", subscriber_ref=self.partner.id
-                ),
-            ]
-        )
+        fr = self.env.ref("base.fr")
+        self.partner.update({"country_id": fr.id, "phone": "+33747397654"})
+        with trap_jobs() as trap:
+            act, get = self._execute_cron(
+                [
+                    fake_issue_doc(
+                        id="i1",
+                        payment_ref="slimpay_ref_1",
+                        subscriber_ref=self.partner.id,
+                    ),
+                ]
+            )
 
         task = self._project_tasks()
+        # Check that a job is created with this function. The function is tesed in a
+        # specific test
+        trap.assert_jobs_count(1, only=task.message_post_send_sms_html)
 
         self.assertEqual(len(task), 1)
         self.assertIssuesAcknowledged(act, "i1")
@@ -570,7 +611,9 @@ class ProjectTC(SavepointCase):
         self.assertIn("YourCompany: rejected payment", emails.mapped("subject"))
         self.assertEqual(self.invoice.state, "open")
 
-        act = self._simulate_wait(task, days=6)
+        act = self._simulate_wait(
+            task, days=6, check_job_function=task._slimpay_payment_issue_retry_payment
+        )
         self.assertInStage(task, "stage_retry_payment_and_wait")
         txs = self._invoice_txs(self.invoice)
         self.assertEqual(len(txs), 2)
@@ -605,7 +648,9 @@ class ProjectTC(SavepointCase):
         self.assertEqual(self.invoice.state, "open")
         self.assertIn("slimpay_ref_2 - slimpay_ref_1 ", task.name)
 
-        act = self._simulate_wait(task, days=6)
+        act = self._simulate_wait(
+            task, days=6, check_job_function=task._slimpay_payment_issue_retry_payment
+        )
         self.assertInStage(task, "stage_retry_payment_and_wait")
         txs = self._invoice_txs(self.invoice)
         self.assertEqual(len(txs), 3)
@@ -637,6 +682,64 @@ class ProjectTC(SavepointCase):
         self.assertEqual(len(self._invoice_txs(self.invoice)), 3)
         self.assertIn("slimpay_ref_3 - slimpay_ref_2 - slimpay_ref_1 ", task.name)
 
+    def test_warning_is_logged_if_partner_has_no_mobile(self):
+        self.partner.update({"phone": "", "mobile": ""})
+        with self.assertLogs(
+            "odoo.addons.payment_slimpay_issue.models.project_task", level="WARNING"
+        ) as cm:
+            act, get = self._execute_cron(
+                [
+                    fake_issue_doc(
+                        id="i1",
+                        payment_ref="slimpay_ref_1",
+                        subscriber_ref=self.partner.id,
+                    ),
+                ]
+            )
+        expected_message = (
+            "WARNING:odoo.addons.payment_slimpay_issue.models.project_task:Could not send SMS to %s (id %s): no phone number found"
+            % (self.partner.name, self.partner.id)
+        )
+        self.assertEqual(expected_message, cm.output[0])
+
+    def test_sms_is_sent_when_partner_has_mobile(self):
+        fr = self.env.ref("base.fr")
+        self.partner.update({"country_id": fr.id, "mobile": "0637174433"})
+        # Check that a job is created
+        with trap_jobs() as trap:
+            act, get = self._execute_cron(
+                [
+                    fake_issue_doc(
+                        id="i1",
+                        payment_ref="slimpay_ref_1",
+                        subscriber_ref=self.partner.id,
+                    ),
+                ]
+            )
+
+        task = self._project_tasks()
+        trap.assert_jobs_count(1, only=task.message_post_send_sms_html)
+
+        # Check that the job execute the function to send sms with the right argumetns
+        template = self.env.ref("payment_slimpay_issue.smspro_payment_issue")
+
+        country_code = self.partner.country_id.code
+        partner_mobile = normalize_phone(
+            self.partner.get_mobile_phone(),
+            country_code,
+        )
+        with mock.patch(
+            "odoo.addons.commown_res_partner_sms.models."
+            "mail_thread.MailThread.message_post_send_sms_html"
+        ) as post_message:
+            trap.perform_enqueued_jobs()
+            post_message.assert_called_once_with(
+                template,
+                task,
+                numbers=[partner_mobile],
+                log_error=True,
+            )
+
     def test_db_savepoint(self):
         """If only one http ack to Slimpay fails, its db updates and only
         them must be rolled back.
@@ -652,26 +755,27 @@ class ProjectTC(SavepointCase):
 
         # Execute test: generate 3 issues and simulate a crash when the
         # second is acknowledged to Slimpay
-        act, get = self._execute_cron(
-            [
-                fake_issue_doc(
-                    id="i0",
-                    payment_ref=tx0.acquirer_reference,
-                    subscriber_ref=self.partner.id,
-                ),
-                fake_issue_doc(
-                    id="i1",
-                    payment_ref=tx1.acquirer_reference,
-                    subscriber_ref=self.partner.id,
-                ),
-                fake_issue_doc(
-                    id="i2",
-                    payment_ref=tx2.acquirer_reference,
-                    subscriber_ref=self.partner.id,
-                ),
-            ],
-            fake_action_crash_for("ack-payment-issue", "i1"),
-        )
+        with mute_logger("odoo.addons.payment_slimpay_issue.models.project_task"):
+            act, get = self._execute_cron(
+                [
+                    fake_issue_doc(
+                        id="i0",
+                        payment_ref=tx0.acquirer_reference,
+                        subscriber_ref=self.partner.id,
+                    ),
+                    fake_issue_doc(
+                        id="i1",
+                        payment_ref=tx1.acquirer_reference,
+                        subscriber_ref=self.partner.id,
+                    ),
+                    fake_issue_doc(
+                        id="i2",
+                        payment_ref=tx2.acquirer_reference,
+                        subscriber_ref=self.partner.id,
+                    ),
+                ],
+                fake_action_crash_for("ack-payment-issue", "i1"),
+            )
 
         # Check the http ack method was called for all issue docs
         self.assertIssuesAcknowledged(act, "i0", "i1", "i2")

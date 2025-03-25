@@ -26,6 +26,7 @@ class RentalFeesTC(DeviceAsAServiceTC):
             {
                 "name": "Test fees_def",
                 "partner_id": self.po.partner_id.id,
+                "valid_from": date(2000, 1, 1),
                 "product_template_id": self.storable_product.id,
                 "order_ids": [(6, 0, self.po.ids)],
                 "agreed_to_std_price_ratio": 0.4,
@@ -147,11 +148,13 @@ class RentalFeesTC(DeviceAsAServiceTC):
         _set_date(quant, datet, "in_date")
         return scrap
 
-    def receive_device(self, serial, contract, date):
+    def receive_device(self, serial, contract, date, auto_grade=True):
         lot_id = (
             self.env["stock.production.lot"]
             .search([("name", "=", serial)])
             .ensure_one()
         )
         loc = self.env.ref("commown_devices.stock_location_devices_to_check")
-        contract.receive_devices([lot_id], {}, loc, date=date, do_transfer=True)
+        contract.receive_devices(lot_id, {}, loc, date=date, do_transfer=True)
+        if auto_grade:
+            lot_id.grade_id = self.env["commown_grade.grade"].search([], limit=1)

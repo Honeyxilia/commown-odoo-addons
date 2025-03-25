@@ -14,15 +14,7 @@ from .common import fake_today
 @post_install(True)
 class CommownContractForecastFunctionalTC(RentalSaleOrderTC):
     def setUp(self):
-        "Revert synchronous job definition - Should refactor this!"
         super().setUp()
-
-        self.env = self.env(
-            context=dict(
-                self.env.context,
-                test_queue_job_no_delay=False,
-            )
-        )
 
         if not self.env["account.journal"].search([("type", "=", "sale")]):
             # When running in a db where the commown module is not installed
@@ -144,6 +136,14 @@ class CommownContractForecastFunctionalTC(RentalSaleOrderTC):
                 cline.mapped("forecast_period_ids.discount")[-4:],
                 [0.0, 10.0, 10.0, 10.0],
             )
+
+        # Check forecasts get synchronously recomputed on dedication action use:
+        contract = contract_lines[0].contract_id
+        old_forecasts = contract.mapped("contract_line_ids.forecast_period_ids")
+        self.assertTrue(old_forecasts.exists(), "Test pre-requisite")
+        contract.action_regenerate_forecast()
+        self.assertFalse(old_forecasts.exists())
+        self.assertTrue(contract.mapped("contract_line_ids.forecast_period_ids"))
 
         # Check forecasts get recomputed on contract programmed end
         new_duration = relativedelta(months=7, days=-1)

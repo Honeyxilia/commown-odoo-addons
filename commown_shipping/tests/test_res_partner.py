@@ -2,6 +2,7 @@ import phonenumbers
 from psycopg2 import IntegrityError
 
 from odoo.tests.common import SavepointCase
+from odoo.tools import mute_logger
 
 from ..models.colissimo_utils import ColissimoError
 
@@ -11,12 +12,18 @@ class ResPartnerContraintsTC(SavepointCase):
 
     def test_street_length_low_level(self):
         with self.assertRaises(IntegrityError) as err:
-            partner = self.env["res.partner"].create({"name": "T", "street": "a" * 36})
+            with mute_logger("odoo.sql_db"):
+                partner = self.env["res.partner"].create(
+                    {"name": "T", "street": "a" * 36}
+                )
         self.assertIn("res_partner_street_max_size_colissimo", err.exception.pgerror)
 
     def test_street2_length_low_level(self):
         with self.assertRaises(IntegrityError) as err:
-            partner = self.env["res.partner"].create({"name": "T", "street2": "a" * 36})
+            with mute_logger("odoo.sql_db"):
+                partner = self.env["res.partner"].create(
+                    {"name": "T", "street2": "a" * 36}
+                )
         self.assertIn("res_partner_street2_max_size_colissimo", err.exception.pgerror)
 
     def test_street_validation(self):
@@ -53,7 +60,6 @@ class ResPartnerColissimoDeliveryDataTC(SavepointCase):
                 "phone": "0352535455",
             }
         )
-        self.partner.update({})
         self.expected = {
             "city": "Strasbourg",
             "countryCode": "FR",
@@ -68,6 +74,22 @@ class ResPartnerColissimoDeliveryDataTC(SavepointCase):
 
     def test_ok(self):
         self.assertEqual(self.partner.colissimo_delivery_data(), self.expected)
+
+    def test_b2c_delivery(self):
+        partner = self.partner.copy({"email": "a@b.coop", "parent_id": self.partner.id})
+        partner.lastname = "Lasttest"  # Avoid automatic 'copy' suffix
+
+        expected = dict(self.expected, email="a@b.coop")
+        self.assertEqual(partner.colissimo_delivery_data(), expected)
+
+    def test_b2b_delivery(self):
+        company = self.partner.copy({"is_company": True, "name": "Test Company"})
+        self.partner.parent_id = company.id
+        partner = self.partner.copy({"type": "delivery", "parent_id": self.partner.id})
+        partner.lastname = "Lasttest"  # Avoid automatic 'copy' suffix
+
+        expected = dict(self.expected, companyName="Test Company")
+        self.assertEqual(partner.colissimo_delivery_data(), expected)
 
     def test_phone_mobile_in_fixed(self):
         "Output correct partner's mobile even when it is in the fixed phone field"

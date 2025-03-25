@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, Warning
 
-from .common import find_products_orig_location, internal_picking
+from .common import do_new_transfer, find_products_orig_location, internal_picking
 
 RESILIATION_XML_ID = "product_rental.contract_termination_project"
 
@@ -92,7 +94,7 @@ class ProjectTaskInvolvedDevicePickingWizard(models.TransientModel):
         if not lot:
             raise UserError(_("Can't move device: no device set on this task!"))
 
-        return internal_picking(
+        new_move_lines = internal_picking(
             [lot],
             {},
             self.env[
@@ -102,8 +104,12 @@ class ProjectTaskInvolvedDevicePickingWizard(models.TransientModel):
             self.location_dest_id,
             self.task_id.get_name_for_origin(),
             date=self.date,
-            do_transfer=True,
         )
+        do_new_transfer(
+            new_move_lines.mapped("picking_id"),
+            self.date or fields.Datetime.now(),
+        )
+        return new_move_lines
 
 
 class ProjectTaskInvolvedNonserialProductPickingWizard(models.TransientModel):
@@ -128,7 +134,7 @@ class ProjectTaskInvolvedNonserialProductPickingWizard(models.TransientModel):
         if self.env.ref(RESILIATION_XML_ID) == self.task_id.project_id:
             raise Warning(_("This action should not be used in resiliation project"))
 
-        return internal_picking(
+        new_move_lines = internal_picking(
             [],
             {self.task_id.storable_product_id: 1},
             self.present_location_id,
@@ -136,8 +142,12 @@ class ProjectTaskInvolvedNonserialProductPickingWizard(models.TransientModel):
             self.location_dest_id,
             self.task_id.get_name_for_origin(),
             date=self.date,
-            do_transfer=True,
         )
+        do_new_transfer(
+            new_move_lines.mapped("picking_id"),
+            self.date or fields.Datetime.now(),
+        )
+        return new_move_lines
 
 
 class ProjectTaskOutwardPickingWizard(models.TransientModel):
@@ -236,7 +246,7 @@ class ProjectTaskOutwardPickingWizard(models.TransientModel):
             "commown_devices.stock_location_available_for_rent"
         )
         return self.task_id.contract_id.send_devices(
-            [self.lot_id],
+            self.lot_id,
             {},
             send_lots_from=send_lots_from,
             origin=self.task_id.get_name_for_origin(),
@@ -257,7 +267,7 @@ class ProjectTaskInwardPickingWizard(models.TransientModel):
     @api.onchange("task_id")
     def onchange_task_id(self):
         if self.task_id:
-            lots = self.task_id.contract_id.quant_ids.mapped("lot_id")
+            lots = self.task_id.contract_id.lot_ids
             if len(lots) == 1:
                 self.lot_id = lots.id
             return {"domain": {"lot_id": [("id", "in", lots.ids)]}}
@@ -265,7 +275,7 @@ class ProjectTaskInwardPickingWizard(models.TransientModel):
     @api.multi
     def create_picking(self):
         return self.task_id.contract_id.receive_devices(
-            [self.lot_id],
+            self.lot_id,
             {},
             self.env.ref("commown_devices.stock_location_devices_to_check"),
             origin=self.task_id.get_name_for_origin(),
@@ -288,6 +298,8 @@ class ProjectTaskContractTransferWizard(models.TransientModel):
     def create_transfer(self):
         lot = self.task_id.lot_id
 
+        date = self.date or fields.Datetime.now()
+
         if not lot:
             raise UserError(_("Can't move device: no device set on this task!"))
 
@@ -296,18 +308,18 @@ class ProjectTaskContractTransferWizard(models.TransientModel):
         )
 
         self.task_id.contract_id.receive_devices(
-            [self.task_id.lot_id],
+            self.task_id.lot_id,
             {},
             transfer_location,
-            date=self.date,
+            date=date,
             do_transfer=True,
         )
 
         self.contract_id.send_devices(
-            [self.task_id.lot_id],
+            self.task_id.lot_id,
             {},
             send_lots_from=transfer_location,
-            date=self.date,
+            date=date + timedelta(seconds=1),
             do_transfer=True,
         )
 
@@ -364,7 +376,7 @@ class ProjectTaskNoTrackingOutwardPickingWizard(models.TransientModel):
     @api.multi
     def create_picking(self):
         return self.task_id.contract_id.send_devices(
-            [],  # Lots
+            self.env["stock.production.lot"],  # Lots
             {self.variant_id: 1},
             send_nonserial_products_from=self._compute_send_from(),
             origin=self.task_id.get_name_for_origin(),
@@ -387,7 +399,7 @@ class ProjectTaskNoTrackingInwardPickingWizard(models.TransientModel):
     @api.multi
     def create_picking(self):
         return self.task_id.contract_id.receive_devices(
-            [],
+            self.env["stock.production.lot"],
             {self.variant_id: 1},
             self.env.ref("commown_devices.stock_location_devices_to_check"),
             origin=self.task_id.get_name_for_origin(),

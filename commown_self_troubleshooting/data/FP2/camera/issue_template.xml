@@ -10,30 +10,12 @@
         <t t-set="old_or_new" t-value="camera_model == u'new' and u'nouveau' or u'ancien'" />
           <t t-if="action=='ship'">
             <p>
-              Après avoir effectué un auto-dépannage, il ressort que la
+              Il ressort que la
               caméra (<t t-esc="old_or_new"/> modèle) de mon FP2 doit être
               changée.
             </p><br/>
 
-            <p>
-              L'adresse d'expédition est la suivante : <br/>
-
-              <ul>
-                <li t-if="name.strip()" t-esc="name.strip()"/>
-                <li t-if="street.strip()" t-esc="street.strip()"/>
-                <li t-if="street2.strip()" t-esc="street2.strip()"/>
-                <li t-if="zipcode.strip()" t-esc="zipcode.strip()"/>
-                <li t-if="city.strip()" t-esc="city.strip()"/>
-                <li t-if="country.strip()" t-esc="country.strip()"/>
-              </ul>
-
-              Informations supplémentaires utiles à la livraison :<br/>
-
-              <ul>
-                <li>Numéro de téléphone : <t t-if="phone.strip()" t-esc="phone.strip()"/></li><br/>
-                <li>Adresse de courriel : <t t-if="email.strip()" t-esc="email.strip()"/></li><br/>
-              </ul>
-            </p>
+            <t t-call="commown_self_troubleshooting.display-shipping-information" />
           </t>
 
           <p t-elif="action=='inform'">

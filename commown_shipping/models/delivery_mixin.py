@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+import datetime
 
 import lxml.etree
 import requests
@@ -14,7 +14,7 @@ BASE_URL = "https://www.coliposte.fr/tracking-chargeur-cxf/TrackingServiceWS/tra
 
 QUEUE_CHANNEL = "root.DELIVERY_TRACKING"
 
-MLVARS_MAX_WAIT = timedelta(days=8)
+MLVARS_MAX_WAIT = datetime.timedelta(days=8)
 
 
 class ParcelError(Exception):
@@ -44,6 +44,14 @@ class CommownTrackDeliveryMixin(models.AbstractModel):
     )
     delivery_date = fields.Date("Delivery Date", copy=False)
 
+    send_email_on_delivery = fields.Boolean(
+        default=lambda self: self._default_send_email_on_delivery(),
+        string="Automatic email on delivery",
+    )
+    on_delivery_email_template_id = fields.Many2one(
+        "mail.template", string="Custom email model for this entity"
+    )
+
     _delivery_tracking_stage_rel = "stage_id"
 
     # Need to be overloaded
@@ -70,7 +78,8 @@ class CommownTrackDeliveryMixin(models.AbstractModel):
     def _delivery_tracking_parent(self):
         return self.mapped(self._delivery_tracking_parent_rel)
 
-    def _default_perform_actions_on_delivery(self):
+    def _default_send_email_on_delivery(self):
+        "By default, send email if parent config says to perform actions on delivery"
         parent = self._delivery_tracking_parent()
         if not parent:
             context = self.env.context
@@ -79,13 +88,17 @@ class CommownTrackDeliveryMixin(models.AbstractModel):
                 parent = self.env[parent._name].browse(context[default_rel])
         return parent.default_perform_actions_on_delivery if parent else True
 
-    send_email_on_delivery = fields.Boolean(
-        default=_default_perform_actions_on_delivery,
-        string="Automatic email on delivery",
-    )
-    on_delivery_email_template_id = fields.Many2one(
-        "mail.template", string="Custom email model for this entity"
-    )
+    @api.multi
+    def initialize_expedition_data(self, parcel_number):
+        parent = self._delivery_tracking_parent()
+        if parent and parent.delivery_tracking:
+            self.update(
+                {
+                    "expedition_ref": parcel_number,
+                    "expedition_date": datetime.date.today(),
+                    "delivery_date": False,
+                }
+            )
 
     @api.multi
     def write(self, values):
@@ -163,7 +176,7 @@ class CommownTrackDeliveryMixin(models.AbstractModel):
     @job(default_channel=QUEUE_CHANNEL)
     def _delivery_tracking_update(self):
         self.ensure_one()
-        now = datetime.utcnow()
+        now = datetime.datetime.utcnow()
 
         infos = self._delivery_tracking_colissimo_status()
         infos.update(

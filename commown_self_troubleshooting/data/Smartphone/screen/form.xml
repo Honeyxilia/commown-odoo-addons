@@ -7,20 +7,25 @@
 
     <t t-name="website.self-troubleshoot-smartphone-screen">
       <t t-call="portal.portal_layout">
-        <t t-set="title">Commown - Auto-dépannage - Smartphone : Mon écran (ou sa protection) est fissuré</t>
+        <t t-set="title">Commown - Besoin d'assistance - Smartphone : Mon écran (ou sa protection) est fissuré</t>
 
         <script type="text/javascript">
+          var screwdriver_codename = "<t t-esc='screwdriver_codename'/>";
+          if(screwdriver_codename.length == 0) {
+            screwdriver_codename = "None";
+          }
+
           $(document).ready(function() {
 
             const wizard = setUpWizard($('#smartwizard'));
 
             $('input[type=radio][name=has_protection]').change(function () {
-                wizard.toggleStep(2, this.value==='yes');
-                wizard.toggleStep(3, this.value==='no');
+              wizard.toggleStep(2, this.value==='yes');
+              wizard.toggleStep(3, this.value==='no');
             });
 
             $('input[type=radio][name=replace_screen]').change(function () {
-                 wizard.toggleStep(4, this.value==='yes');
+              wizard.toggleStep(4, screwdriver_codename !== 'None' &amp;&amp; this.value==='yes');
             });
 
           });
@@ -36,7 +41,7 @@
         <div class="bg-white border m-0 p-3 rounded">
           <div class="d-flex flex-row" style="justify-content: space-between;">
             <div class="d-flex flex-column">
-              <h1>Auto-dépannage : Smartphone</h1>
+              <h1>Besoin d'assistance : Smartphone</h1>
               <h2>Mon écran (ou sa protection) est fissuré </h2>
             </div>
             <button id="contactAHuman" class="btn btn-warning" style="align-self: flex-start">
@@ -79,7 +84,7 @@
                   durée de vie de l'appareil.</p>
                   <p>Ainsi, votre Smartphone doit déjà avoir une vitre de protection posée
                   par nos soins avant de vous l'envoyer.</p>
-                  <p>Commençons par vérifier que la vitre de protection est bien présente sur votre Smartphone :
+                  <p>Commençons par vérifier que la vitre de protection est bien présente sur votre Smartphone :
                   cela se remarque facilement dans les coins de l'écran grâce à un relief visible
                   (cf. photo ci-dessous) et détectable au toucher.</p>
                   <img
@@ -168,11 +173,11 @@
 
                 <t t-call="commown_self_troubleshooting.step-manipulation-option">
                   <t t-set="step">4</t>
+                  <t t-set="screwdriver_codename" t-value="screwdriver_codename"/>
                 </t>
 
                 <t t-call="commown_self_troubleshooting.step-ship-module">
                   <t t-set="step">5</t>
-                  <t t-set="new_module">les éléments nécessaires</t>
                 </t>
 
                 <t t-call="commown_self_troubleshooting.step-confirm-change">

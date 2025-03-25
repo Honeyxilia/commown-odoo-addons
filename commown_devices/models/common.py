@@ -4,6 +4,10 @@ from odoo import _, fields
 from odoo.exceptions import UserError
 
 
+def _assigned(picking):
+    return picking.state == "assigned"
+
+
 def first_common_location(locs):
     """From a list of locations return the first common parent location.
     Retun a falsy stock.location if there is no common location.
@@ -34,9 +38,12 @@ def find_products_orig_location(env, products, stocks=None, compute_summary=Fals
     `stocks` parameter is a list of stock.location to look in for `products` ordered by
     preference"""
     if stocks is None:
-        stocks = self.env.ref("commown_devices.stock_location_available_for_rent")
+        stocks = env.ref("commown_devices.stock_location_available_for_rent")
     pts_orig = {}
-    enough_to_send = lambda q, to_send: q.quantity - q.reserved_quantity >= to_send
+
+    def enough_to_send(q, to_send):
+        return q.quantity - q.reserved_quantity >= to_send
+
     for product, quantity_to_send in products.items():
         enough_in_quant = partial(enough_to_send, to_send=quantity_to_send)
         quants = env["stock.quant"]
@@ -81,17 +88,66 @@ def find_products_orig_location(env, products, stocks=None, compute_summary=Fals
     return {"pts_orig": pts_orig, "text_summary": location_summary}
 
 
+def create_move_from_lots(picking, located_lots):
+    """Create a stock move for each lot. Do not reuse existing move because we might want to
+    assign them to different contracts.
+    The stock.move.line are automatically created when the picking is assigned"""
+    env = picking.env
+    moves_by_lot = {}
+    for lot in located_lots:
+        stock_move = env["stock.move"].create(
+            {
+                "name": lot.product_id.name,
+                "picking_id": picking.id,
+                "picking_type_id": picking.picking_type_id.id,
+                "location_id": located_lots[lot]["loc"].id,
+                "location_dest_id": picking.location_dest_id.id,
+                "product_id": lot.product_id.id,
+                "product_uom_qty": lot.product_qty,
+                "product_uom": lot.product_uom_id.id,
+                "date": picking.date,
+                "date_expected": picking.date,
+            }
+        )
+        moves_by_lot[lot] = stock_move
+    return moves_by_lot
+
+
+def search_or_create_move_from_products(picking, located_products):
+    """Create a move for each product of located_products."""
+    env = picking.env
+    moves_by_products = {}
+    for product, pt_info in located_products.items():
+        stock_move = env["stock.move"].create(
+            {
+                "name": product.name,
+                "picking_id": picking.id,
+                "picking_type_id": picking.picking_type_id.id,
+                "location_id": pt_info["loc"].id,
+                "location_dest_id": picking.location_dest_id.id,
+                "product_id": product.id,
+                "product_uom_qty": pt_info["qty"],
+                "product_uom": product.uom_id.id,
+                "date": picking.date,
+                "date_expected": picking.date,
+            }
+        )
+        moves_by_products[product] = stock_move
+    return moves_by_products
+
+
 def internal_picking(
-    lots,  # list of lot
+    lots,  # recordset of stock.production.lot
     products,  # dict {product : quantity}
     send_nonserial_products_from,
     send_lots_from,
     dest_location,
     origin,
     date=None,
-    do_transfer=False,
 ):
-    """Create picking with tracked and untracked products"""
+    """Create picking with tracked and untracked products, if a picking is passed as an
+    argument, try to update the existing picking with new move lines"""
+
     env = dest_location.env
     located_products = find_products_orig_location(
         env, products, send_nonserial_products_from
@@ -109,11 +165,11 @@ def internal_picking(
         for lot in lots
     }
 
-    lots_locations = [located_lots[l]["loc"] for l in located_lots.keys()]
-
-    picking_type = env.ref("stock.picking_type_internal")
+    lots_locations = [located_lots[lot]["loc"] for lot in located_lots.keys()]
 
     date = date or fields.Datetime.now()
+
+    picking_type = env.ref("stock.picking_type_internal")
 
     picking_orig_location = first_common_location(products_locations + lots_locations)
     picking = env["stock.picking"].create(
@@ -127,68 +183,35 @@ def internal_picking(
             "origin": origin,
         }
     )
-
-    moves_lots = {}
-    for lot in located_lots.keys():
-        moves_lots[lot] = env["stock.move"].create(
-            {
-                "name": lot.product_id.name,
-                "picking_id": picking.id,
-                "picking_type_id": picking_type.id,
-                "location_id": located_lots[lot]["loc"].id,
-                "location_dest_id": dest_location.id,
-                "product_id": lot.product_id.id,
-                "product_uom_qty": lot.product_qty,
-                "product_uom": lot.product_uom_id.id,
-                "date": date,
-            }
-        )
-
-    moves_products = {}
-    for product, pt_info in located_products.items():
-        moves_products[product] = env["stock.move"].create(
-            {
-                "name": product.name,
-                "picking_id": picking.id,
-                "picking_type_id": picking_type.id,
-                "location_id": pt_info["loc"].id,
-                "location_dest_id": dest_location.id,
-                "product_id": product.id,
-                "product_uom_qty": pt_info["qty"],
-                "product_uom": product.uom_id.id,
-                "date": date,
-            }
-        )
     picking.scheduled_date = date
 
+    moves_by_lots = create_move_from_lots(picking, located_lots)
+    moves_by_products = search_or_create_move_from_products(picking, located_products)
+
     assert picking.move_lines
-    picking.action_confirm()
+    picking.with_context(dont_merge_moves=True).action_confirm()
     picking.action_assign()
     assert picking.state == "assigned", (
         "Cannot assign any device: state keeps: %r" % picking.state
     )
 
-    for lot, move in moves_lots.items():
-        move.move_line_ids.update(
-            {
-                "lot_id": lot.id,
-                "location_id": located_lots[lot]["loc"].id,
-                "qty_done": lot.product_qty,
-            }
+    new_moves = env["stock.move"]
+
+    for lot, move in moves_by_lots.items():
+        line = move.move_line_ids
+        line.ensure_one()
+        line.update(
+            {"lot_id": lot.id, "qty_done": 1.0, "location_id": located_lots[lot]["loc"]}
         )
+        new_moves |= move
 
-    for product, move in moves_products.items():
-        move.move_line_ids.update(
-            {
-                "location_id": located_products[product]["loc"].id,
-                "qty_done": products[product],
-            }
-        )
+    for product, move in moves_by_products.items():
+        line = move.move_line_ids
+        line.ensure_one()
+        line.update({"qty_done": located_products[product]["qty"]})
+        new_moves |= move
 
-    if do_transfer:
-        do_new_transfer(picking, date)
-
-    return picking
+    return new_moves
 
 
 def do_new_transfer(picking, date):
@@ -202,6 +225,16 @@ def _force_picking_date(picking, date):
     for move in picking.move_lines:
         _set_date(move, date, "date")
     for move_line in picking.move_line_ids:
+        _set_date(move_line, date, "date")
+        for quant in move_line.lot_id.quant_ids:
+            if quant.quantity > 0 and quant.location_id == loc:
+                _set_date(quant, date, "in_date")
+
+
+def _force_scrap_date(scrap, date):
+    loc = scrap.scrap_location_id
+    _set_date(scrap.move_id, date, "date")
+    for move_line in scrap.move_id.move_line_ids:
         _set_date(move_line, date, "date")
         for quant in move_line.lot_id.quant_ids:
             if quant.quantity > 0 and quant.location_id == loc:

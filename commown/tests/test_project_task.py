@@ -1,10 +1,27 @@
+from contextlib import contextmanager
+
+import mock
+
 from odoo.exceptions import AccessError
 from odoo.tests.common import TransactionCase, at_install, post_install
+
+from odoo.addons.commown_res_partner_sms.models.common import normalize_phone
+from odoo.addons.queue_job.tests.common import trap_jobs
+
+
+class NoSMSAssertMixin:
+    @contextmanager
+    def assertNoSMSLogged(self):
+        chan = "odoo.addons.commown.models.project_task"
+        with self.assertLogs(chan, level="WARNING") as logged:
+            yield
+        self.assertEqual(len(logged.output), 1)
+        self.assertIn("No SMS reminder sent", logged.output[0])
 
 
 @at_install(False)
 @post_install(True)
-class ProjectTaskModelTC(TransactionCase):
+class ProjectTaskModelTC(NoSMSAssertMixin, TransactionCase):
     def test_followup_view(self):
         project = self.env.ref("commown_self_troubleshooting.support_project")
         project.show_internal_followup = True
@@ -41,7 +58,7 @@ class ProjectTaskModelTC(TransactionCase):
 
 @at_install(False)
 @post_install(True)
-class ProjectTaskActionTC(TransactionCase):
+class ProjectTaskActionTC(NoSMSAssertMixin, TransactionCase):
     def setUp(self):
         super(ProjectTaskActionTC, self).setUp()
 
@@ -84,7 +101,7 @@ class ProjectTaskActionTC(TransactionCase):
         )
 
         self.partner = self.env.ref("base.partner_demo_portal")
-        self.partner.update({"firstname": "Flo", "phone": "0000000000"})
+        self.partner.update({"firstname": "Flo", "phone": "+33747397654"})
 
         self.task = self.env["project.task"].create(
             {
@@ -114,7 +131,7 @@ class ProjectTaskActionTC(TransactionCase):
         self.assertEqual(message.author_id, self.env.ref("base.user_demo").partner_id)
 
     def assertIsReminderSMS(self, message):
-        self.assertEqual(message.subtype_id, self.env.ref("mail.mt_comment"))
+        self.assertEqual(message.subtype_id, self.env.ref("mail.mt_note"))
         self.assertIn("ignorez ce SMS", message.body)
 
     def assertIsStageChangeMessage(self, message):
@@ -126,19 +143,36 @@ class ProjectTaskActionTC(TransactionCase):
         """
 
         message_num = len(self.task.message_ids)
-        self.task.update({"stage_id": self.stage_reminder.id})
+        fr = self.env.ref("base.fr")
+        self.task.partner_id.update({"country_id": fr.id, "phone": "+33747397654"})
+        with trap_jobs() as trap:
+            self.task.update({"stage_id": self.stage_reminder.id})
+        trap.assert_jobs_count(1, only=self.task.message_post_send_sms_html)
 
         # Check email message
-        # 3 expected messages: email, sms, stage change (in reverse order)
-        self.assertEqual(len(self.task.message_ids), message_num + 3)
+        # 2 expected messages: email, stage change (in reverse order)
+        self.assertEqual(len(self.task.message_ids), message_num + 2)
         self.assertIsStageChangeMessage(self.task.message_ids[0])
-        sms = self.task.message_ids[1]
-        self.assertIsReminderSMS(sms)
-        self.assertEqual(
-            sms.mapped("notification_ids.res_partner_id.email"),
-            ["mail2sms@envoyersmspro.com"],
+        self.assertIsReminderEmail(self.task.message_ids[1])
+
+        # Check job for sms has been posted
+        template = self.env.ref("commown.sms_template_issue_reminder")
+        country_code = self.task.partner_id.country_id.code
+        partner_mobile = normalize_phone(
+            self.task.partner_id.get_mobile_phone(),
+            country_code,
         )
-        self.assertIsReminderEmail(self.task.message_ids[2])
+        with mock.patch(
+            "odoo.addons.commown_res_partner_sms.models."
+            "mail_thread.MailThread.message_post_send_sms_html"
+        ) as post_message:
+            trap.perform_enqueued_jobs()
+            post_message.assert_called_once_with(
+                template,
+                self.task,
+                numbers=[partner_mobile],
+                log_error=True,
+            )
 
     def test_send_reminder_no_sms(self):
         """A reminder SMS must not be sent when a non-employee message
@@ -153,7 +187,8 @@ class ProjectTaskActionTC(TransactionCase):
         # Simulate partner sending a message, then put task back to reminder
         self._send_partner_email()
         message_num = len(self.task.message_ids)
-        self.task.update({"stage_id": self.stage_reminder.id})
+        with self.assertNoSMSLogged():
+            self.task.update({"stage_id": self.stage_reminder.id})
 
         # 2 expected messages: email, stage change (in reverse order)
         self.assertEqual(len(self.task.message_ids), message_num + 2)
@@ -198,8 +233,9 @@ class ProjectTaskActionTC(TransactionCase):
         self._send_partner_email()
         self.assertEqual(self.task.stage_id, self.stage_pending)
 
+        with self.assertNoSMSLogged():
+            self.task.update({"stage_id": self.stage_reminder.id})
         other_partner = self.env.ref("base.partner_demo_portal")
-        self.task.update({"stage_id": self.stage_reminder.id})
         self._send_partner_email(author_id=other_partner.id)
         self.assertEqual(self.task.stage_id, self.stage_pending)
 

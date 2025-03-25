@@ -4,7 +4,7 @@ from collections import defaultdict
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger(__name__)
 
 
 def _all_children(entities):
@@ -33,12 +33,29 @@ class ResPartner(models.Model):
             )
 
         for record in self:
+            # Get partner location BEFORE changing its parent
+            old_loc = record.get_customer_location()
+
+            # Re-parent the partner
             name = _("%(name)s (indep. - %(company_name)s)") % {
                 "name": record.name,
                 "company_name": record.parent_id.name,
             }
             new_company = record.copy({"is_company": True, "name": name})
             record.parent_id = new_company.id
+
+            # Move partner's contract stock to its new location
+            if old_loc:
+                partner_running_contracts = record.env["contract.contract"].search(
+                    [
+                        ("partner_id", "=", record.id),
+                        "|",
+                        ("date_end", "=", False),
+                        ("date_end", ">", fields.Date.context_today(record)),
+                    ]
+                )
+                for contract in partner_running_contracts:
+                    contract._partner_location_changed(old_loc)
 
     @api.multi
     def rented_quantity(self, product_template=None, product_category=None):
@@ -61,9 +78,7 @@ class ResPartner(models.Model):
 
         today = fields.Date.today()
 
-        holding = self.commercial_partner_id
-        while holding.parent_id:
-            holding = holding.parent_id.commercial_partner_id
+        holding = self.get_holding()
 
         clines = self.env["contract.line"].search(
             [

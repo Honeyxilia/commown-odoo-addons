@@ -3,6 +3,7 @@ import json
 import dateutil.parser
 from lxml import etree
 
+from odoo.tests.common import SavepointCase
 from odoo.tools.safe_eval import safe_eval
 
 from odoo.addons.product_rental.tests.common import RentalSaleOrderTC
@@ -23,13 +24,53 @@ def create_config(serv_tmpl, type, stor_tmpl, stor_variant, att_val_ids=None):
 
 
 def add_attributes_to_product(product, attribute, attribute_values):
-    line = product.env["product.template.attribute.line"].create(
+    product.env["product.template.attribute.line"].create(
         {
             "product_tmpl_id": product.id,
             "attribute_id": attribute.id,
             "value_ids": [(6, 0, attribute_values.ids)],
         }
     )
+
+
+class BaseLotTC(SavepointCase):
+    def setUp(self):
+        super().setUp()
+
+        self.product_tmpl = self.env["product.template"].create(
+            {
+                "name": "Fairphone 3",
+                "type": "product",
+                "tracking": "serial",
+            }
+        )
+        self.product = self.product_tmpl.product_variant_id
+        self.lot = self.env["stock.production.lot"].create(
+            {
+                "name": "test-lot",
+                "product_id": self.product.id,
+            }
+        )
+        self.location_available_for_rent = self.env.ref(
+            "commown_devices.stock_location_available_for_rent"
+        )
+        self.location_internal_available = self.env["stock.location"].create(
+            {
+                "name": "Test internal available location",
+                "usage": "internal",
+                "partner_id": 1,
+                "location_id": self.location_available_for_rent.id,
+            }
+        )
+
+        self.quant = self.env["stock.quant"].create(
+            {
+                "product_id": self.lot.product_id.id,
+                "lot_id": self.lot.id,
+                "location_id": self.location_internal_available.id,
+                "quantity": 1,
+            }
+        )
 
 
 class DeviceAsAServiceTC(RentalSaleOrderTC):
@@ -59,7 +100,7 @@ class DeviceAsAServiceTC(RentalSaleOrderTC):
             list_price=60.0,
             rental_price=30.0,
             property_contract_template_id=contract_tmpl.id,
-            storable_product_id=self.storable_product.id,
+            primary_storable_variant_id=self.storable_product.product_variant_id.id,
             followup_sales_team_id=team.id,
         )
 
@@ -88,14 +129,22 @@ class DeviceAsAServiceTC(RentalSaleOrderTC):
         )
 
     def adjust_stock(
-        self, product=None, qty=1.0, serial="serial-0", location=None, date="2000-01-01"
+        self,
+        product=None,
+        qty=1.0,
+        serial="serial-0",
+        location=None,
+        date="2000-01-01",
+        grade_lot=True,
     ):
         if product is None:
             product = self.storable_product.product_variant_id
+        grade = self.env.ref("commown_grade.grade_A0")
         lot = self.env["stock.production.lot"].create(
             {
                 "name": serial,
                 "product_id": product.id,
+                "grade_id": grade_lot and grade.id,
             }
         )
         location = location or self.location_fp3_new
@@ -168,7 +217,7 @@ class DeviceAsAServiceTC(RentalSaleOrderTC):
         location = location or self.env.ref("stock.stock_location_stock")
         lot = self.env["stock.production.lot"].search([("name", "=", serial)])
         contract.send_devices(
-            [lot.ensure_one()], {}, send_lots_from=location, date=date, do_transfer=True
+            lot.ensure_one(), {}, send_lots_from=location, date=date, do_transfer=True
         )
 
     def prepare_ui(
@@ -229,3 +278,54 @@ class DeviceAsAServiceTC(RentalSaleOrderTC):
             possible_values[name] = self.env[fields[name]["relation"]].search(domain)
 
         return values, possible_values
+
+
+def create_lot_and_quant(env, lot_name, product, location):
+    # XXX Duplicate of adjust stock
+    lot = env["stock.production.lot"].create(
+        {
+            "name": lot_name,
+            "product_id": product.id,
+            "grade_id": env.ref("commown_grade.grade_A0").id,
+        }
+    )
+
+    quant = env["stock.quant"].create(
+        {
+            "product_id": product.id,
+            "lot_id": lot.id,
+            "location_id": location.id,
+            "quantity": 1,
+        }
+    )
+    return lot
+
+
+class BaseWizardToEmployeeMixin:
+    def setUp(self):
+        super().setUp()
+        project = self.env["project.project"].create({"name": "Test"})
+        partner = self.env["res.partner"].create(
+            {
+                "firstname": "Firsttest",
+                "lastname": "Lasttest",
+                "street": "8A rue Schertz",
+                "zip": "67200",
+                "city": "Strasbourg",
+                "country_id": self.env.ref("base.fr").id,
+                "email": "contact@commown.coop",
+                "mobile": "0601020304",
+                "parent_id": 1,
+            }
+        )
+
+        self.task = self.env["project.task"].create(
+            {"name": "test", "project_id": project.id, "partner_id": partner.id}
+        )
+
+    def get_wizard(self, **kwargs):
+        kwargs.setdefault("task_id", self.task.id)
+        kwargs.setdefault("delivered_by_hand", False)
+        wizard = self.env["project.task.to.employee.wizard"].create(kwargs)
+        wizard.onchange_reset_shipping_data_if_delivered_by_hand()
+        return wizard

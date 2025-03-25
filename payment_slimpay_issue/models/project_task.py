@@ -4,6 +4,10 @@ import requests
 
 from odoo import _, api, fields, models
 
+from odoo.addons.commown_res_partner_sms.models.common import normalize_phone
+
+from .utils import SLIMPAY_ERROR_CODES
+
 _logger = logging.getLogger(__name__)
 
 
@@ -174,7 +178,7 @@ class ProjectTask(models.Model):
             tr_ref = payment_doc["reference"]
             tr = tr_model.search([("acquirer_reference", "=", tr_ref)]).ensure_one()
         except:
-            _logger.warning(
+            _logger.info(
                 "Could not find Odoo transaction for" " Slimpay payment %r", tr_ref
             )
         else:
@@ -418,6 +422,16 @@ class ProjectTask(models.Model):
         task = self._slimpay_payment_issue_get_or_create(project, client, issue_doc)
         invoice = task.invoice_id
 
+        if issue_doc.get("rejectReason"):
+            msg = _("Reject reason is %(code)s: %(text)s")
+            code = issue_doc.get("rejectReasonCode", "")
+            if code in SLIMPAY_ERROR_CODES:
+                text = _(SLIMPAY_ERROR_CODES[code])
+            else:
+                text = _("Unknown reject error")
+
+            task.message_post(body=msg % {"code": code, "text": text})
+
         if not task.slimpay_payment_issue_process_automatically():
             task.update(
                 {"stage_id": self.env.ref("payment_slimpay_issue.stage_orphan").id}
@@ -466,3 +480,21 @@ class ProjectTask(models.Model):
                 }
             )
         return task
+
+    def _slimpay_payment_issue_send_sms(self):
+        country_code = self.partner_id.country_id.code
+        phone = normalize_phone(
+            self.partner_id.get_mobile_phone(),
+            country_code,
+        )
+        if phone:
+            template = self.env.ref("payment_slimpay_issue.smspro_payment_issue")
+            self.with_delay().message_post_send_sms_html(
+                template, self, numbers=[phone], log_error=True
+            )
+
+        else:
+            _logger.warning(
+                "Could not send SMS to %s (id %s): no phone number found"
+                % (self.partner_id.name, self.partner_id.id)
+            )

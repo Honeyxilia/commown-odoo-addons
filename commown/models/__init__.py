@@ -16,7 +16,6 @@ from . import project_task
 from . import project_task_type
 from . import mail_template
 from . import reconciliation_widget
-from . import res_groups
 from . import res_lang
 from . import res_partner
 from . import res_users
@@ -24,3 +23,4 @@ from . import sale_order
 from . import simple_reconciliation
 from . import utm
 from . import website
+from . import wizard_portal_access

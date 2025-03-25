@@ -21,8 +21,9 @@ class RentalFeesDefinition(models.Model):
     _description = (
         "A definition of fees to be paid back to the supplier when renting his hardware"
     )
+    _order = "partner_id, product_template_id, valid_from"
 
-    name = fields.Char(required=True, copy=False)
+    name = fields.Char(required=True)
 
     partner_id = fields.Many2one(
         "res.partner",
@@ -56,6 +57,17 @@ class RentalFeesDefinition(models.Model):
         help="The product concerned by this fees definition",
         required=True,
         domain=[("type", "=", "product")],
+    )
+
+    valid_from = fields.Date(
+        string="Valid from",
+        help=(
+            "From this date on and until a new fees definition with the same"
+            " (partner, product) couple and with a more recent date arrives, all POs"
+            " with an order date after this will be attributed to this fees definition."
+        ),
+        default=lambda self: fields.Date.today(),
+        required=True,
     )
 
     agreed_to_std_price_ratio = fields.Float(
@@ -92,7 +104,7 @@ class RentalFeesDefinition(models.Model):
 
     excluded_devices = fields.One2many(
         comodel_name="rental_fees.excluded_device",
-        string="Explicitely excluded devices (with compensation)",
+        string="Explicitely excluded devices",
         inverse_name="fees_definition_id",
         copy=False,
     )
@@ -108,13 +120,14 @@ class RentalFeesDefinition(models.Model):
     order_ids = fields.Many2many(
         comodel_name="purchase.order",
         string="Purchase orders",
+        copy=False,
     )
 
     line_ids = fields.One2many(
         comodel_name="rental_fees.definition_line",
         string="Fees definition lines",
         inverse_name="fees_definition_id",
-        copy=False,
+        copy=True,
     )
 
     # Computed on computation's state change
@@ -141,13 +154,21 @@ class RentalFeesDefinition(models.Model):
     @api.constrains("partner_id")
     def _check_partner_coherency(self):
         for fees_def in self:
-            if fees_def.mapped("order_ids.partner_id") != self.partner_id:
+            partner_ids = fees_def.mapped("order_ids.partner_id")
+            if partner_ids and partner_ids != self.partner_id:
                 raise models.ValidationError(
                     _(
                         "Fees definition purchase orders partners must all be"
                         " the same as the fees definition's partner"
                     )
                 )
+
+    @api.constrains("order_ids")
+    def _check_no_po_exclude_from_fees(self):
+        for fees_def in self:
+            if any(fees_def.mapped("order_ids.exclude_from_fees")):
+                msg = _("Cannot add an excluded-from-fees PO to a fees definition")
+                raise models.ValidationError(msg)
 
     @api.constrains("partner_id", "product_template_id", "order_ids")
     def _check_no_po_override(self):
@@ -171,12 +192,18 @@ class RentalFeesDefinition(models.Model):
 
     def devices_delivery(self):
         result = {}
+
+        ignored_devices = self.excluded_devices.filtered(
+            lambda d: not d.with_compensation
+        ).mapped("device")
+
         for ol in self.mapped("order_ids.order_line").filtered(
             lambda ol: ol.product_id.product_tmpl_id == self.product_template_id
         ):
             for ml in ol.mapped("move_ids.move_line_ids"):
                 for device in ml.mapped("lot_id"):
-                    result[device] = {"order_line": ol, "date": ml.date.date()}
+                    if device not in ignored_devices:
+                        result[device] = {"order_line": ol, "date": ml.date.date()}
         return result
 
     def scrapped_devices(self, date):
@@ -235,6 +262,73 @@ class RentalFeesDefinition(models.Model):
             "view_mode": "tree,form",
             "res_model": "stock.production.lot",
         }
+
+    def action_update_with_new_pos(self):
+        """Update orders of each fees def with the purchase orders which date is after
+        the current fees def valid_from and the next valid_from date of the other fees
+        defs with the same partner and product.
+
+        Notify the user of added POs and when a PO is still draft or not fully received.
+        """
+
+        update_done = False
+
+        for fees_def in self:
+
+            _pt = fees_def.product_template_id
+
+            next_fees_def = self.env["rental_fees.definition"].search(
+                [
+                    ("partner_id", "=", fees_def.partner_id.id),
+                    ("product_template_id", "=", _pt.id),
+                    ("valid_from", ">", fees_def.valid_from),
+                ],
+                order="valid_from asc",
+                limit=1,
+            )
+
+            po_domain = [
+                ("partner_id", "=", fees_def.partner_id.id),
+                ("order_line.product_id.product_tmpl_id", "=", _pt.id),
+                ("date_order", ">=", fees_def.valid_from),
+                ("state", "!=", "cancel"),
+                ("id", "not in", fees_def.order_ids.ids),
+                ("exclude_from_fees", "=", False),
+            ]
+            if next_fees_def:
+                po_domain.append(("date_order", "<", next_fees_def.valid_from))
+
+            new_pos = self.env["purchase.order"].search(po_domain, order="id")
+
+            for new_po in new_pos:
+                if new_po.state not in ("purchase", "done"):
+                    self.env.user.notify_danger(
+                        _("%s is still in an early state.") % new_po.name,
+                        sticky=True,
+                    )
+                else:
+                    order_lines = new_po.order_line.filtered(
+                        lambda ol: ol.product_id.product_tmpl_id == _pt
+                    )
+                    ordered_qty = sum(order_lines.mapped("product_qty"))
+                    received_qty = sum(order_lines.mapped("qty_received"))
+
+                    if ordered_qty > received_qty:
+                        msg = _("%s is not fully delivered.")
+                        self.env.user.notify_danger(msg % new_po.name, sticky=True)
+
+            if new_pos:
+                msg = _("Adding new POs to fees def '%s': %s")
+                self.env.user.notify_success(
+                    msg % (fees_def.name, ", ".join(new_pos.mapped("name"))),
+                    sticky=True,
+                )
+                fees_def.order_ids |= new_pos
+                update_done = True
+
+        if update_done is False:
+            msg = _("No fees definition needs updating.")
+            self.env.user.notify_warning(msg, sticky=True)
 
 
 class RentalFeesDefinitionLine(models.Model):
@@ -442,6 +536,15 @@ class RentalFeesExcludedDevice(models.Model):
     )
 
     reason = fields.Char()
+
+    with_compensation = fields.Boolean(
+        string="With compensation",
+        default=True,
+        help=(
+            "If inactive, the device will be completely absent"
+            " of the fees computation, as if it was never bought"
+        ),
+    )
 
     def _default_device_domain(self):
         key = "default_fees_definition_id"

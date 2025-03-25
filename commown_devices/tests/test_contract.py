@@ -1,28 +1,23 @@
-from ..models.common import do_new_transfer
+from odoo.exceptions import UserError
+
 from .common import DeviceAsAServiceTC
 
 
 class ContractTC(DeviceAsAServiceTC):
-    def test_stock(self):
-        loc_check = self.env.ref("commown_devices.stock_location_devices_to_check")
-
-        lot1 = self.adjust_stock(serial="my-fp3-1")
-
-        lot2 = self.adjust_stock(serial="my-fp3-2")
-
+    def test_cant_send_ungraded_lot(self):
         contract = self.env["contract.contract"].of_sale(self.so)[0]
+        lot = self.adjust_stock(grade_lot=False)
+        with self.assertRaises(UserError) as err:
+            contract.send_devices(lot, {})
+        self.assertIn("Please set the grade on lots", err.exception.name)
 
-        contract.send_devices(lot1, {}, date="2021-07-01 17:00:00", do_transfer=True)
-        contract.send_devices(lot2, {}, date="2021-07-14", do_transfer=True)
-        return_picking = contract.receive_devices(
-            lot1, {}, loc_check, date="2021-07-22", do_transfer=False
-        )
+    def test_compute_lot_number(self):
+        contract = self.env["contract.contract"].of_sale(self.so)[0]
+        init_lot_nb = contract.lot_nb
 
-        self.assertFalse(contract.stock_at_date("2021-07-01 16:59:59"))
-        self.assertEqual(contract.stock_at_date("2021-07-01 17:00:01"), lot1)
-        self.assertEqual(contract.stock_at_date("2021-07-20"), lot1 | lot2)
+        lot = self.adjust_stock(grade_lot=False)
+        contract.lot_ids |= lot
+        self.assertEqual(contract.lot_nb, init_lot_nb + 1)
 
-        # Check that until the picking is done, the stock stays as is:
-        self.assertEqual(contract.stock_at_date("2021-07-25"), lot1 | lot2)
-        do_new_transfer(return_picking, "2021-07-22")
-        self.assertEqual(contract.stock_at_date("2021-07-25"), lot2)
+        contract.lot_ids = False
+        self.assertEqual(contract.lot_nb, init_lot_nb)

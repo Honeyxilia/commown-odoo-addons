@@ -52,13 +52,20 @@
       </div>
       <div class="mt-4" t-if="st_data">
         <hr class="mt-1 mb-0"/>
-        <p>Pour contacter l'équipe parcourez la section "Auto-dépannage" à gauche.</p>
+        <p>Pour contacter l'équipe parcourez la section "Vos besoins d'assistance".</p>
       </div>
     </xpath>
 
   </template>
 
   <template id="portal_my_details" inherit_id="portal.portal_my_details">
+
+    <!-- Add a warning to users so that they do not reuse someone else's account -->
+    <xpath expr="//form" position="before">
+      <div class="alert alert-danger">
+        For legal reasons, please never use someone else's account.
+      </div>
+    </xpath>
 
     <!-- Replace name by firstname + lastname -->
     <xpath expr="//form" position="attributes">

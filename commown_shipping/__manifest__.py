@@ -2,12 +2,13 @@
     "name": "Commown shipping",
     "category": "Business",
     "summary": "Commown shipping-related features",
-    "version": "12.0.1.0.17",
+    "version": "12.0.1.0.27",
     "author": "Commown SCIC,Odoo Community Association (OCA)",
     "license": "AGPL-3",
     "website": "https://commown.coop",
     "depends": [
         "commown_contractual_issue",
+        "commown_res_partner_sms",
         "base_automation",
         "sale",
         "website",
@@ -19,14 +20,13 @@
         "web_ir_actions_act_multi",
     ],
     "external_dependencies": {
-        "bin": ["pdfjam", "pdftk"],
+        "bin": ["pdfjam", "pdfunite"],
         "python": ["requests_toolbelt"],
     },
     "data": [
         "data/actions.xml",
         "data/cron.xml",
         "data/mail_template.xml",
-        "data/parcels.xml",
         "data/shipping_accounts.xml",
         "views/crm_team.xml",
         "views/crm_lead.xml",
@@ -37,6 +37,9 @@
         "views/wizard_print_label.xml",
         "security/ir.model.access.csv",
     ],
-    "demo": ["data/demo.xml"],
+    "demo": [
+        "demo/mail_template.xml",
+        "demo/parcel_type.xml",
+    ],
     "installable": True,
 }

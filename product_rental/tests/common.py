@@ -1,6 +1,12 @@
+import lxml.html
 from mock import patch
 
+from odoo import api
 from odoo.tests.common import SavepointCase
+
+from odoo.addons.queue_job.tests.common import trap_jobs
+from odoo.addons.website.models.website import Website  # see mock
+from odoo.addons.website.tools import MockRequest
 
 from ..models.contract import NO_DATE
 
@@ -17,13 +23,6 @@ class MockedEmptySessionMixin(object):
         self.addCleanup(request_patcher.stop)
 
         super(MockedEmptySessionMixin, self).setUp()
-
-        self.env = self.env(
-            context=dict(
-                self.env.context,
-                test_queue_job_no_delay=True,  # contract_queue_job uses jobs
-            )
-        )
 
 
 class RentalSaleOrderMixin:
@@ -200,7 +199,9 @@ class RentalSaleOrderMixin:
         # contract_queue_job (installed in the CI) returns an empty invoice set
         # (see https://github.com/OCA/contract/blob/12.0/contract_queue_job
         #  /models/contract_contract.py#L21)
-        contracts._recurring_create_invoice()
+        with trap_jobs() as trap:
+            contracts._recurring_create_invoice()
+        trap.perform_enqueued_jobs()
         invoices = self.env["account.invoice"].search(
             [
                 ("invoice_line_ids.contract_line_id.contract_id", "in", contracts.ids),
@@ -253,3 +254,26 @@ class RentalSaleOrderMixin:
 
 class RentalSaleOrderTC(MockedEmptySessionMixin, RentalSaleOrderMixin, SavepointCase):
     pass
+
+
+class WebsiteBaseTC(RentalSaleOrderTC):
+    def setUp(self):
+        super().setUp()
+        self.partner = self.env.ref("base.partner_demo_portal")
+        # Use a portal user to avoid language selector rendering
+        # (other page is editable and the selector is more complex)
+        env = api.Environment(self.env.cr, self.partner.user_ids[0].id, {})
+        self.website = self.env.ref("website.default_website").with_env(env)
+
+    def render_view(self, ref, sudo_as=None, **render_kwargs):
+        view = self.env.ref(ref)
+        if sudo_as:
+            view = view.sudo(sudo_as)
+
+        with patch.object(Website, "get_alternate_languages", return_value=()):
+            with MockRequest(self.env, website=self.website) as request:
+                request.httprequest.args = []
+                request.httprequest.query_string = ""
+                request.endpoint_arguments = {}
+                html = view.render(render_kwargs)
+        return lxml.html.fromstring(html)

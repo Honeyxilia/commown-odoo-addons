@@ -41,8 +41,8 @@ class SelfHelp(http.Controller):
         return contract_id
 
     @http.route(["/self-troubleshoot"], type="http", auth="user", website=True)
-    def create_support_card(self, **kw):
-        _logger.info("create_support_card called with parameters %s", kw)
+    def create_project_task(self, **kw):
+        _logger.info("create_project_task called with parameters %s", kw)
         env = request.env
         partner = env.user.partner_id
         post = request.params.copy()
@@ -72,21 +72,16 @@ class SelfHelp(http.Controller):
         task = env["project.task"].sudo().create(task_data)
         task.onchange_contract_or_product()
 
-        env["mail.followers"].create(
-            {
-                "res_model": task._name,
-                "res_id": task.id,
-                "partner_id": partner.id,
-                "subtype_ids": [
-                    (
-                        6,
-                        0,
-                        [
-                            env.ref("mail.mt_comment").id,
-                            env.ref("project.mt_task_rating").id,
-                        ],
-                    )
-                ],
-            }
-        )
+        if partner not in task.message_follower_ids.mapped("partner_id"):
+            comment = env.ref("mail.mt_comment")
+            rating = env.ref("project.mt_task_rating")
+            env["mail.followers"].create(
+                {
+                    "res_model": task._name,
+                    "res_id": task.id,
+                    "partner_id": partner.id,
+                    "subtype_ids": [(6, 0, [comment.id, rating.id])],
+                }
+            )
+
         return request.redirect("/my/task/%d" % task.id)

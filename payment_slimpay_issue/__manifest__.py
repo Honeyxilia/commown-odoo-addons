@@ -5,7 +5,7 @@
 {
     "name": "Payment Slimpay issue",
     "category": "Website",
-    "version": "12.0.1.0.3",
+    "version": "12.0.1.0.9",
     "author": "Commown SCIC SAS",
     "license": "AGPL-3",
     "website": "https://commown.coop",
@@ -13,7 +13,9 @@
         "account_payment_partner",
         "account_payment_slimpay",
         "base_automation",
+        "commown_res_partner_sms",
         "project",
+        "queue_job",
     ],
     "data": [
         "data/mail_template.xml",

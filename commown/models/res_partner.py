@@ -99,7 +99,9 @@ class CommownPartner(models.Model):
 
     country_id = fields.Many2one(default=_default_country)
 
-    parent_payment_token_id = fields.Many2one(related="parent_id.payment_token_id")
+    parent_payment_token_id = fields.Many2one(
+        string="Parent Payment token", related="parent_id.payment_token_id"
+    )
 
     def _apply_bin_field_size_policy(self, vals):
         """Apply the binary field limit policy: resize images, raise if the
@@ -204,6 +206,7 @@ class CommownPartner(models.Model):
     def write(self, vals):
         self._apply_bin_field_size_policy(vals)
 
+        old_recv_acc = False
         if "parent_id" in vals:
             old_recv_acc = self.property_account_receivable_id
 
@@ -226,7 +229,7 @@ class CommownPartner(models.Model):
         if "supplier" in vals and vals["supplier"]:
             self._create_payable_account()
 
-        if "parent_id" in vals and old_recv_acc:
+        if old_recv_acc:
             data = _PROPERTY_ACCOUNT_DATA["receivable"]
             ref_account = self.env.ref(data["ref_account"])
             if (
