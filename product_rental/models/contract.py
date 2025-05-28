@@ -237,6 +237,7 @@ class Contract(models.Model):
                 "sale_order_line_id": so_line.id,
             }
         )
+        self.date_start = NO_DATE
 
         rental_products = _rental_products(contract_descr)
 
