@@ -16,4 +16,7 @@
         "commown_lead_risk_analysis",
         "website_sale_coupon",
     ],
+    "data": [
+        "data/actions.xml",
+    ],
 }
